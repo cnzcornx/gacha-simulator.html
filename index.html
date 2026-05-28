@@ -1,0 +1,965 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>⚔️ Gacha Simulator</title>
+<style>
+:root {
+  --bg:#1a1728;--bg2:#221f35;--bg3:#2b2843;--bg4:#353050;
+  --bdr:#3e3a5c;--bdr2:#524e78;
+  --ssr:#f0c840;--sr:#a07ee0;--r:#5fa0d8;--n:#8b9199;
+  --ssr-bg:rgba(240,200,64,.12);--sr-bg:rgba(160,126,224,.12);
+  --r-bg:rgba(95,160,216,.12);--n-bg:rgba(139,145,153,.10);
+  --acc:#6c63ff;--acc2:#5752d1;
+  --green:#4ade80;--red:#f87171;--yel:#fbbf24;
+  --tx:#e8e4f2;--tx2:#9590b5;--tx3:#645f82;
+  --r10:10px;--r6:6px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--tx);font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;padding:16px}
+
+/* Fixed overlays */
+canvas#cc{position:fixed;inset:0;pointer-events:none;z-index:9999}
+#rar-ov{position:fixed;inset:0;pointer-events:none;z-index:9400;opacity:0;transition:opacity .5s}
+#ssr-wrap{position:fixed;inset:0;display:none;align-items:center;justify-content:center;pointer-events:none;z-index:9500}
+
+/* SSR Banner */
+.ssrban{text-align:center;opacity:0}
+.ssrban.show{animation:sban .65s cubic-bezier(.34,1.56,.64,1) forwards}
+@keyframes sban{0%{opacity:0;transform:scale(.25) rotate(-5deg);filter:blur(10px)}60%{opacity:1;transform:scale(1.08);filter:blur(0)}100%{opacity:1;transform:scale(1)}}
+.sban-main{font-size:3.4rem;font-weight:900;letter-spacing:14px;color:#f0c840;
+  text-shadow:0 0 18px #f0c840,0 0 45px rgba(240,200,64,.55),0 3px 6px rgba(0,0,0,.6);
+  display:block;margin-bottom:5px}
+.sban-sub{font-size:.8rem;letter-spacing:9px;color:rgba(255,255,255,.65);text-transform:uppercase}
+
+.wrap{max-width:1080px;margin:0 auto}
+h1{text-align:center;padding:28px 0 8px;font-size:2rem;background:linear-gradient(135deg,#f0c840,#a07ee0);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.sub{text-align:center;color:var(--tx2);font-size:.875rem;margin-bottom:28px}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:700px){.g2{grid-template-columns:1fr}}
+
+.card{background:var(--bg2);border:1px solid var(--bdr);border-radius:var(--r10);padding:20px;margin-bottom:16px}
+.ctitle{font-size:1rem;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.bonus{font-size:.65rem;color:var(--yel);padding:1px 6px;border:1px solid var(--yel);border-radius:10px;opacity:.7}
+label{display:block;font-size:.775rem;color:var(--tx2);margin-bottom:4px;font-weight:500}
+input[type=number],input[type=text],select{background:var(--bg4);border:1px solid var(--bdr);border-radius:var(--r6);
+  color:var(--tx);padding:7px 11px;width:100%;font-size:.875rem;outline:none;transition:border-color .15s}
+input:focus,select:focus{border-color:var(--acc)}
+input[readonly]{opacity:.65;cursor:default}
+.hint{font-size:.72rem;color:var(--tx3);margin-top:3px}
+.btn{padding:7px 14px;border:none;border-radius:var(--r6);cursor:pointer;font-size:.825rem;font-weight:600;transition:all .15s}
+.btn-p{background:var(--acc);color:#fff}.btn-p:hover{background:var(--acc2)}
+.btn-d{background:transparent;color:var(--red);border:1px solid var(--red)}.btn-d:hover{background:rgba(248,113,113,.1)}
+.btn-g{background:var(--bg4);color:var(--tx);border:1px solid var(--bdr)}.btn-g:hover{border-color:var(--bdr2)}
+.btn-ex1{background:#065f46;color:#6ee7b7;border:1px solid #047857}.btn-ex1:hover{background:#047857}
+.btn-ex2{background:#1e3a5f;color:#93c5fd;border:1px solid #2563eb}.btn-ex2:hover{background:#1d4ed8;color:#fff}
+.btn-full{width:100%;padding:11px;font-size:.9rem}
+hr.d{border:none;border-top:1px solid var(--bdr);margin:14px 0}
+.sec{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.sec .ctitle{margin:0}
+.f2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px}
+.f3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:14px}
+@media(max-width:600px){.f3{grid-template-columns:1fr 1fr}}
+@media(max-width:480px){.f2,.f3{grid-template-columns:1fr}}
+.fg{margin-bottom:11px}
+
+/* Rate */
+.rg{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:10px}
+@media(max-width:480px){.rg{grid-template-columns:repeat(2,1fr)}}
+.rl{display:flex;align-items:center;margin-bottom:4px;font-size:.775rem;font-weight:600}
+.rdot{width:9px;height:9px;border-radius:50%;display:inline-block;margin-right:5px}
+.tbar{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:var(--r6);font-size:.825rem;border-left:3px solid var(--bdr)}
+.tbar.ok{border-color:var(--green);background:rgba(74,222,128,.07)}
+.tbar.err{border-color:var(--red);background:rgba(248,113,113,.07)}
+.tbar.warn{border-color:var(--yel);background:rgba(251,191,36,.07)}
+.btrack{flex:1;height:7px;background:var(--bg4);border-radius:4px;overflow:hidden}
+.bfill{height:100%;border-radius:4px;transition:width .3s,background .3s}
+
+/* Item pool */
+.ar{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
+.ar input{flex:1;min-width:110px}.ar select{width:85px;flex-shrink:0}
+.ptags{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.ptag{padding:2px 10px;border-radius:20px;font-size:.72rem;font-weight:700}
+table{width:100%;border-collapse:collapse;font-size:.825rem}
+th{text-align:left;padding:7px 10px;color:var(--tx3);border-bottom:1px solid var(--bdr);font-weight:500}
+td{padding:7px 10px;border-bottom:1px solid rgba(62,58,92,.5)}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(255,255,255,.02)}
+.tw{overflow-x:auto}
+.rp{padding:2px 8px;border-radius:4px;font-size:.72rem;font-weight:700}
+.empty{text-align:center;padding:28px;color:var(--tx3);font-size:.825rem}
+.ei{font-size:2rem;margin-bottom:6px}
+.al{padding:9px 13px;border-radius:var(--r6);font-size:.825rem;margin-bottom:12px;display:none}
+.al.show{display:block}
+.al-e{background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.3);color:#fca5a5}
+
+/* ══════════════════════════════
+   GACHA STAGE
+══════════════════════════════ */
+.stage{
+  background:linear-gradient(160deg,#1c1a30 0%,#251e3c 50%,#1c1a30 100%);
+  border:1px solid var(--bdr);border-radius:var(--r10);
+  padding:24px 20px;margin-bottom:16px;position:relative;overflow:hidden;
+}
+/* Soft ambient glow at top */
+.stage::before{content:'';position:absolute;inset:0;
+  background:radial-gradient(ellipse at 50% -5%,rgba(108,99,255,.13) 0%,transparent 60%);
+  pointer-events:none}
+/* Inner border shine */
+.stage::after{content:'';position:absolute;inset:1px;border-radius:calc(var(--r10) - 1px);
+  border:1px solid rgba(108,99,255,.12);pointer-events:none}
+
+/* ── Treasure Chest ── */
+.chest-area{display:flex;justify-content:center;margin-bottom:20px}
+.chest-wrap{position:relative;width:110px;height:110px;display:flex;align-items:center;justify-content:center;cursor:pointer}
+
+.chest-glow{position:absolute;inset:-28px;border-radius:50%;pointer-events:none;opacity:0;transition:opacity .4s}
+.chest-glow.on{opacity:1;animation:cglw .7s ease-out forwards}
+@keyframes cglw{0%{transform:scale(.35);opacity:0}45%{transform:scale(1.2);opacity:1}100%{transform:scale(1);opacity:.5}}
+
+/* Idle breathing */
+.chest{width:88px;height:73px;position:relative;
+  filter:drop-shadow(0 6px 20px rgba(0,0,0,.5));
+  animation:cbreathe 3s ease-in-out infinite;cursor:pointer}
+.chest:hover{animation:none;transform:scale(1.07) translateY(-3px)}
+.chest.shake,.chest.shake-hard{animation:none}
+.chest.open{animation:none}
+@keyframes cbreathe{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+
+.chest-lid{
+  position:absolute;top:0;left:0;right:0;height:33px;
+  background:linear-gradient(175deg,#d09820,#a07220);
+  border-radius:8px 8px 2px 2px;border:2.5px solid #5c3e06;
+  transform-origin:bottom center;transition:transform .5s cubic-bezier(.34,1.56,.64,1);z-index:2}
+.chest-lid::after{content:'';position:absolute;left:4px;right:4px;top:4px;height:5px;
+  background:rgba(255,255,255,.2);border-radius:3px}
+.chest-body{
+  position:absolute;bottom:0;left:0;right:0;height:44px;
+  background:linear-gradient(180deg,#9a6820,#7a5018 55%,#5e3c10);
+  border-radius:2px 2px 8px 8px;border:2.5px solid #4a2e08;border-top:none;overflow:hidden}
+.chest-band{position:absolute;left:0;right:0;top:0;height:5px;
+  background:linear-gradient(180deg,rgba(255,255,255,.15),transparent)}
+.chest-lock{
+  position:absolute;left:50%;bottom:9px;transform:translateX(-50%);
+  width:17px;height:14px;background:linear-gradient(135deg,#e0b820,#b08010);
+  border-radius:3px 3px 5px 5px;border:1.5px solid #7a5608}
+.chest-lock::before{content:'';position:absolute;left:50%;top:-9px;transform:translateX(-50%);
+  width:11px;height:11px;border-radius:50%;border:2.5px solid #b08010}
+.chest-rivets{position:absolute;left:6px;right:6px;top:10px;bottom:9px;
+  display:flex;justify-content:space-between;align-items:center;padding:0 6px}
+.chest-rivet{width:5px;height:5px;border-radius:50%;background:rgba(255,200,50,.35)}
+
+.chest.shake{animation:cshake .55s ease}
+.chest.shake-hard{animation:cshard .65s ease}
+.chest.open .chest-lid{transform:rotateX(-135deg)}
+@keyframes cshake{0%,100%{transform:rotate(0)}15%{transform:rotate(-6deg) scale(1.05)}35%{transform:rotate(6deg) scale(1.08)}55%{transform:rotate(-3deg) scale(1.05)}75%{transform:rotate(2.5deg)}}
+@keyframes cshard{0%,100%{transform:rotate(0) scale(1)}10%{transform:rotate(-10deg) scale(1.07) translateY(-4px)}25%{transform:rotate(10deg) scale(1.12) translateY(-7px)}40%{transform:rotate(-6deg) scale(1.08)}55%{transform:rotate(6deg) scale(1.04)}72%{transform:rotate(-2.5deg)}}
+
+/* Light rays */
+.rays{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;opacity:0}
+.rays.on{opacity:1;animation:rspin 1.6s linear infinite}
+@keyframes rspin{to{transform:rotate(360deg)}}
+.ray{position:absolute;width:2px;border-radius:1px;background:currentColor;transform-origin:50% 100%;opacity:.45}
+
+/* ── Spin Display — SINGLE element, zero overlap ── */
+.spin-area{display:flex;flex-direction:column;align-items:center;gap:10px;margin-bottom:20px}
+
+/* Pull history dots */
+.pull-dots{display:flex;gap:5px;flex-wrap:wrap;justify-content:center;max-width:300px;min-height:20px}
+.pull-dot{width:11px;height:11px;border-radius:50%;border:1.5px solid rgba(255,255,255,.15);flex-shrink:0}
+.pull-dot.new{animation:dpop .35s cubic-bezier(.34,1.56,.64,1)}
+@keyframes dpop{0%{transform:scale(0)}70%{transform:scale(1.4)}100%{transform:scale(1)}}
+
+/* The spin box — one element, one text */
+.spin-box{
+  width:230px;height:90px;
+  background:linear-gradient(160deg,var(--bg4),var(--bg3));
+  border:2.5px solid var(--bdr);border-radius:14px;
+  position:relative;display:flex;align-items:center;justify-content:center;
+  box-shadow:inset 0 3px 14px rgba(0,0,0,.4);
+  transition:border-color .25s,box-shadow .25s;overflow:visible}
+/* Top/bottom fade inside box (decorative) */
+.spin-box::before{content:'';position:absolute;inset:0;border-radius:12px;
+  background:linear-gradient(to bottom,rgba(255,255,255,.05) 0%,transparent 40%,rgba(0,0,0,.2) 100%);
+  pointer-events:none}
+
+/* Corner decorations */
+.sc{position:absolute;width:14px;height:14px;pointer-events:none}
+.sc.tl{top:5px;left:5px;border-top:2px solid;border-left:2px solid;border-radius:3px 0 0 0}
+.sc.tr{top:5px;right:5px;border-top:2px solid;border-right:2px solid;border-radius:0 3px 0 0}
+.sc.bl{bottom:5px;left:5px;border-bottom:2px solid;border-left:2px solid;border-radius:0 0 0 3px}
+.sc.br{bottom:5px;right:5px;border-bottom:2px solid;border-right:2px solid;border-radius:0 0 3px 0}
+
+/* THE spin value — one element only, no dual-layer */
+.sval{
+  font-size:2.3rem;font-weight:900;letter-spacing:6px;
+  position:relative;z-index:2;user-select:none;
+  transition:color .1s}
+/* Each reel tick: fast vertical scale-in */
+.sval.tick{animation:stk .09s ease-out both}
+/* Final land: big bounce-in */
+.sval.land{animation:sland .52s cubic-bezier(.34,1.56,.64,1) both}
+@keyframes stk{0%{transform:scaleY(.08) scaleX(.75);opacity:.35}100%{transform:scale(1);opacity:1}}
+@keyframes sland{0%{transform:scale(.35);opacity:0;filter:blur(5px)}60%{transform:scale(1.2);opacity:1;filter:blur(0)}80%{transform:scale(.94)}100%{transform:scale(1)}}
+
+.spin-hint{font-size:.75rem;color:var(--tx3);text-align:center;min-height:1.3em;transition:color .3s}
+
+/* ── Reveal Card ── */
+.rv-area{display:flex;flex-direction:column;align-items:center;margin-bottom:18px}
+.rv-wrap{perspective:900px;width:178px;height:112px}
+.rv-inner{width:100%;height:100%;position:relative;transform-style:preserve-3d;transition:transform .65s cubic-bezier(.34,1.56,.64,1)}
+.rv-wrap.flip .rv-inner{transform:rotateY(180deg)}
+.rv-f,.rv-b{
+  position:absolute;inset:0;border-radius:12px;backface-visibility:hidden;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  border:2px solid var(--bdr)}
+.rv-f{background:linear-gradient(135deg,var(--bg3),var(--bg4));font-size:2.2rem}
+.rv-b{transform:rotateY(180deg);background:var(--bg3);padding:12px;text-align:center}
+.rv-rar{font-size:1.25rem;font-weight:900;letter-spacing:2px;margin-bottom:4px}
+.rv-name{font-size:.78rem;color:var(--tx2)}
+.rv-sub{font-size:.7rem;color:var(--tx3);margin-top:3px}
+
+/* Rarity card glow */
+.rv-wrap.gl-ssr .rv-b{border-color:#f0c840;box-shadow:0 0 22px rgba(240,200,64,.5),0 0 44px rgba(240,200,64,.2);animation:cplssr 1s ease-in-out 3}
+.rv-wrap.gl-sr  .rv-b{border-color:#a07ee0;box-shadow:0 0 16px rgba(160,126,224,.45)}
+.rv-wrap.gl-r   .rv-b{border-color:#5fa0d8;box-shadow:0 0 12px rgba(95,160,216,.35)}
+@keyframes cplssr{0%,100%{box-shadow:0 0 22px rgba(240,200,64,.5)}50%{box-shadow:0 0 38px rgba(240,200,64,.85),0 0 65px rgba(240,200,64,.3)}}
+
+/* ── Pull button ── */
+.btn-roll{
+  width:100%;padding:14px;font-size:1.05rem;font-weight:800;letter-spacing:1px;
+  border:none;border-radius:var(--r6);cursor:pointer;
+  background:linear-gradient(135deg,#6c63ff,#a07ee0);color:#fff;
+  transition:all .2s;position:relative;overflow:hidden;margin-top:12px}
+.btn-roll:hover{transform:translateY(-2px);box-shadow:0 8px 26px rgba(108,99,255,.4)}
+.btn-roll:active{transform:translateY(0)}
+.btn-roll.busy{pointer-events:none;opacity:.6}
+.btn-roll::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.18),transparent);transform:translateX(-100%)}
+.btn-roll:hover::after{animation:sheen .55s ease forwards}
+@keyframes sheen{to{transform:translateX(100%)}}
+
+/* Stats + charts + results (same as before) */
+.sg{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:10px;margin-bottom:16px}
+.sb{background:var(--bg3);border:1px solid var(--bdr);border-radius:var(--r6);padding:11px 8px;text-align:center}
+.sv{font-size:1.4rem;font-weight:700;line-height:1;margin-bottom:3px}.sl{font-size:.68rem;color:var(--tx3)}
+.crow{display:flex;align-items:center;gap:9px;margin-bottom:7px;font-size:.775rem}
+.clbl{width:32px;font-weight:700;flex-shrink:0}
+.ctrk{flex:1;height:18px;background:var(--bg4);border-radius:3px;overflow:hidden;position:relative}
+.cbar{height:100%;border-radius:3px;transition:width .5s ease}
+.cline{position:absolute;top:0;height:100%;border-right:2px dashed rgba(255,255,255,.3);pointer-events:none}
+.cval{width:132px;flex-shrink:0;color:var(--tx2)}.chint{font-size:.7rem;color:var(--tx3);margin-top:4px}
+.rl-box{max-height:210px;overflow-y:auto;border:1px solid var(--bdr);border-radius:var(--r6)}
+.rl-box::-webkit-scrollbar{width:4px}.rl-box::-webkit-scrollbar-thumb{background:var(--bdr2);border-radius:2px}
+.erow{display:flex;gap:7px;flex-wrap:wrap;margin-top:12px}
+tr.ssr-row td{background:rgba(240,200,64,.05)!important}
+/* Toggles */
+.trow{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.tlbl{font-size:.875rem}
+.sw{position:relative;width:42px;height:22px;flex-shrink:0}
+.sw input{display:none}
+.sw-s{position:absolute;inset:0;background:var(--bdr2);border-radius:22px;cursor:pointer;transition:.2s}
+.sw-s::before{content:'';position:absolute;width:16px;height:16px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.2s}
+.sw input:checked+.sw-s{background:var(--acc)}
+.sw input:checked+.sw-s::before{transform:translateX(20px)}
+.subsett{background:var(--bg3);border-radius:var(--r6);padding:12px;margin-bottom:10px}
+/* History */
+.hi{display:flex;align-items:center;justify-content:space-between;padding:9px 12px;background:var(--bg3);border:1px solid var(--bdr);border-radius:var(--r6);margin-bottom:7px;font-size:.8rem;gap:8px}
+.hm{color:var(--tx3);font-size:.7rem;margin-top:2px}
+/* Insight */
+.ins{background:var(--bg3);border-left:3px solid var(--acc);border-radius:0 var(--r6) var(--r6) 0;padding:12px 15px;margin-top:12px;font-size:.825rem;line-height:1.65}
+.ins h4{margin-bottom:8px;color:var(--ssr);font-size:.875rem}.ins p{margin-bottom:5px}
+/* Modal */
+.mover{position:fixed;inset:0;background:rgba(0,0,0,.78);display:none;align-items:center;justify-content:center;z-index:1000;padding:16px}
+.mover.show{display:flex}
+.mdl{background:var(--bg2);border:1px solid var(--bdr2);border-radius:var(--r10);padding:22px;width:100%;max-width:380px}
+.mdl h3{margin-bottom:14px;font-size:1rem}
+.mact{display:flex;gap:8px;justify-content:flex-end;margin-top:14px}
+</style>
+</head>
+<body>
+
+<!-- ── Fixed overlays ── -->
+<canvas id="cc"></canvas>
+<div id="rar-ov"></div>
+<div id="ssr-wrap">
+  <div class="ssrban" id="sban">
+    <span class="sban-main">✦ &nbsp;S S R&nbsp; ✦</span>
+    <div class="sban-sub">L E G E N D A R Y</div>
+  </div>
+</div>
+
+<div class="wrap">
+  <h1>⚔️ Gacha Simulator</h1>
+  <p class="sub">จำลองระบบ gacha — ตั้งค่า rate, จัดการ item pool, วิเคราะห์โอกาส</p>
+
+  <div class="g2">
+    <!-- Rate Settings -->
+    <div class="card">
+      <div class="ctitle">🎲 Rate Settings</div>
+      <div class="rg">
+        <div><div class="rl"><span class="rdot" style="background:var(--ssr)"></span><span style="color:var(--ssr)">SSR</span></div><input type="number" id="r-ssr" value="1" min="0" max="100" step="0.01" oninput="onRC()"></div>
+        <div><div class="rl"><span class="rdot" style="background:var(--sr)"></span><span style="color:var(--sr)">SR</span></div><input type="number" id="r-sr" value="9" min="0" max="100" step="0.01" oninput="onRC()"></div>
+        <div><div class="rl"><span class="rdot" style="background:var(--r)"></span><span style="color:var(--r)">R</span></div><input type="number" id="r-r" value="30" min="0" max="100" step="0.01" oninput="onRC()"></div>
+        <div><div class="rl"><span class="rdot" style="background:var(--n)"></span><span style="color:var(--n)">N</span></div><input type="number" id="r-n" value="60" min="0" max="100" step="0.01" oninput="onRC()"></div>
+      </div>
+      <div class="tbar ok" id="tbar">
+        <span id="ttxt">Total: 100%</span>
+        <div class="btrack"><div class="bfill" id="bfill" style="width:100%;background:var(--green)"></div></div>
+        <span id="tico">✅</span>
+      </div>
+    </div>
+
+    <!-- Pity + Free Roll -->
+    <div class="card">
+      <div class="ctitle">🛡️ Pity & Free Roll <span class="bonus">BONUS</span></div>
+      <div class="trow"><span class="tlbl">Pity System (การันตี SSR)</span><label class="sw"><input type="checkbox" id="pton" onchange="ts('pton','psub')"><span class="sw-s"></span></label></div>
+      <div id="psub" class="subsett" style="display:none">
+        <div class="f2">
+          <div><label>การันตีทุก X rolls</label><input type="number" id="px" value="90" min="1"></div>
+          <div><label>Pity carry-over เริ่มต้น</label><input type="number" id="pinit" value="0" min="0"></div>
+        </div>
+        <div class="hint">⚡ Pity reset หลังได้ SSR · Free roll ไม่นับ pity</div>
+      </div>
+      <hr class="d">
+      <div class="trow"><span class="tlbl">Free Roll Rule</span><label class="sw"><input type="checkbox" id="fron" onchange="ts('fron','frsub')"><span class="sw-s"></span></label></div>
+      <div id="frsub" class="subsett" style="display:none">
+        <div class="f2">
+          <div><label>ทุก X paid rolls...</label><input type="number" id="frx" value="10" min="1"></div>
+          <div><label>...ได้ Y free rolls</label><input type="number" id="fry" value="1" min="1"></div>
+        </div>
+        <div class="hint">⚡ Free rolls ไม่ต่อเนื่อง · ไม่นับ pity</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Item Pool -->
+  <div class="card">
+    <div class="sec">
+      <div class="ctitle" style="margin:0">📦 Item Pool</div>
+      <div class="ptags" id="ptags" style="margin:0"></div>
+    </div>
+    <div class="ar">
+      <input type="text" id="iname" placeholder="ชื่อ item...">
+      <select id="irar"><option value="SSR">SSR</option><option value="SR">SR</option><option value="R" selected>R</option><option value="N">N</option></select>
+      <button class="btn btn-p" onclick="addItem()">+ Add</button>
+    </div>
+    <div id="pal" class="al al-e"></div>
+    <div class="tw">
+      <table id="ptbl" style="display:none"><thead><tr><th>#</th><th>Item Name</th><th>Rarity</th><th>Actions</th></tr></thead><tbody id="pbody"></tbody></table>
+      <div id="pemp" class="empty"><div class="ei">📭</div>ยังไม่มี item</div>
+    </div>
+  </div>
+
+  <!-- ══ GACHA STAGE ══ -->
+  <div class="stage">
+    <div class="ctitle" style="margin-bottom:20px">🎰 Gacha Stage</div>
+
+    <!-- Chest -->
+    <div class="chest-area" onclick="runSim()">
+      <div class="chest-wrap">
+        <div class="chest-glow" id="cglow"></div>
+        <div class="chest" id="chest">
+          <div class="chest-lid"></div>
+          <div class="chest-body">
+            <div class="chest-band"></div>
+            <div class="chest-rivets"><div class="chest-rivet"></div><div class="chest-rivet"></div><div class="chest-rivet"></div><div class="chest-rivet"></div></div>
+            <div class="chest-lock"></div>
+          </div>
+        </div>
+        <div class="rays" id="rays"></div>
+      </div>
+    </div>
+
+    <!-- Spin Display — single element, clean -->
+    <div class="spin-area">
+      <div class="pull-dots" id="pdots"></div>
+
+      <div class="spin-box" id="sbox">
+        <span class="sc tl" id="sc-tl"></span>
+        <span class="sc tr" id="sc-tr"></span>
+        <span class="sc bl" id="sc-bl"></span>
+        <span class="sc br" id="sc-br"></span>
+        <div class="sval" id="sval" style="color:var(--tx3)">?</div>
+      </div>
+
+      <div class="spin-hint" id="shint">คลิก 📦 หรือกด PULL เพื่อเริ่มสุ่ม</div>
+    </div>
+
+    <!-- Reveal Card -->
+    <div class="rv-area">
+      <div class="rv-wrap" id="rvwrap">
+        <div class="rv-inner">
+          <div class="rv-f">🎁</div>
+          <div class="rv-b" id="rvback">
+            <div class="rv-rar" id="rvrar">?</div>
+            <div class="rv-name" id="rvname">-</div>
+            <div class="rv-sub" id="rvsub"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Controls -->
+    <div id="sal" class="al al-e" style="margin-top:12px"></div>
+    <div class="f2" style="margin-top:12px">
+      <div><label>จำนวน Rolls</label><input type="number" id="sn" value="1" min="1"><div class="hint">paid rolls</div></div>
+      <div><label>ราคาต่อ Roll (฿)</label><input type="number" id="sc" value="100" min="0"><div class="hint">0 = ฟรี</div></div>
+    </div>
+    <button class="btn-roll" id="pbtn" onclick="runSim()">⚔️ PULL!</button>
+
+    <!-- Results -->
+    <div id="sres" style="display:none;margin-top:24px">
+      <hr class="d">
+      <div class="sg" id="sstats"></div>
+      <div style="margin-bottom:6px;font-size:.825rem;color:var(--tx2)">📊 Rate: Set vs Actual</div>
+      <div id="schart"></div>
+      <hr class="d">
+      <div class="sec" style="margin-bottom:8px">
+        <span style="font-size:.825rem;color:var(--tx2)">Item Summary</span>
+        <div class="erow" style="margin:0;gap:6px">
+          <button class="btn btn-ex1" onclick="expPull()" style="font-size:.72rem;padding:4px 9px">📥 Pull CSV</button>
+          <button class="btn btn-ex2" onclick="expSum()" style="font-size:.72rem;padding:4px 9px">📊 Summary CSV</button>
+        </div>
+      </div>
+      <div class="rl-box" id="isum"></div>
+    </div>
+  </div>
+
+  <!-- History -->
+  <div class="card">
+    <div class="sec">
+      <div class="ctitle" style="margin:0">📜 Simulation History <span class="bonus">BONUS</span></div>
+      <button class="btn btn-d" onclick="clearH()" style="font-size:.72rem;padding:4px 9px">Clear</button>
+    </div>
+    <div id="hlist"><div class="empty"><div class="ei">🕓</div>ยังไม่มีประวัติ</div></div>
+  </div>
+
+  <!-- Monte Carlo -->
+  <div class="card">
+    <div class="ctitle">💰 Player POV Simulator <span style="font-size:.8rem;font-weight:400;color:var(--tx2)">(Monte Carlo)</span></div>
+    <div id="mcal" class="al al-e"></div>
+    <div class="f3">
+      <div><label>งบประมาณ (฿)</label><input type="number" id="mcb" value="1000" min="0" oninput="calcP()"></div>
+      <div><label>ราคาต่อ roll (฿)</label><input type="number" id="mcp" value="100" min="1" oninput="calcP()"></div>
+      <div><label>Simulation Rounds</label><input type="number" id="mcr" value="1000" min="1" max="100000"><div class="hint">มากกว่า = แม่นกว่า</div></div>
+    </div>
+    <div style="background:var(--bg3);border-radius:var(--r6);padding:10px 13px;margin-bottom:14px;font-size:.825rem;display:flex;align-items:center;gap:8px">
+      <span style="color:var(--tx2)">Paid Rolls:</span>
+      <span id="pdsp" style="color:var(--ssr);font-weight:700;font-size:1.1rem">10</span>
+      <span style="color:var(--tx3)">rolls จากงบ</span>
+    </div>
+    <button class="btn btn-p btn-full" onclick="runMC()">🔬 Run Monte Carlo</button>
+    <div id="mcres" style="display:none;margin-top:20px">
+      <div class="sg" id="mcstats"></div>
+      <div id="mcins" class="ins"></div>
+      <div class="erow">
+        <button class="btn btn-ex2" onclick="expMC()" style="font-size:.72rem;padding:4px 9px">📊 Export Player POV CSV</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Modal -->
+<div class="mover" id="mdl">
+  <div class="mdl">
+    <h3>✏️ Edit Item</h3>
+    <div class="fg"><label>Item Name</label><input type="text" id="en"></div>
+    <div class="fg"><label>Rarity</label><select id="er"><option value="SSR">SSR</option><option value="SR">SR</option><option value="R">R</option><option value="N">N</option></select></div>
+    <div class="mact"><button class="btn btn-g" onclick="closeM()">Cancel</button><button class="btn btn-p" onclick="saveE()">Save</button></div>
+  </div>
+</div>
+
+<script>
+// ────────────────────────────────────
+// CONFETTI
+// ────────────────────────────────────
+const CC = (() => {
+  const cv = document.getElementById('cc'), cx = cv.getContext('2d');
+  let pts = [], af = null;
+  const rsz = () => { cv.width = innerWidth; cv.height = innerHeight; };
+
+  function fire(isSSR, originEl) {
+    rsz();
+    const cols = isSSR
+      ? ['#f0c840','#ffe07a','#fff3b0','#a07ee0','#ffffff','#ffd700','#ffaa00','#f5c542']
+      : ['#a07ee0','#c084fc','#ddd6fe','#7dd3fc','#ffffff','#5fa0d8'];
+    let ox = cv.width / 2, oy = cv.height * .35;
+    if (originEl) {
+      const r = originEl.getBoundingClientRect();
+      ox = r.left + r.width / 2; oy = r.top + r.height / 2;
+    }
+    const n = isSSR ? 160 : 75;
+    pts = Array.from({ length: n }, () => ({
+      x: ox + (Math.random() - .5) * 60, y: oy + (Math.random() - .5) * 30,
+      vx: (Math.random() - .5) * (isSSR ? 18 : 11), vy: -(Math.random() * (isSSR ? 18 : 11) + 4),
+      col: cols[Math.floor(Math.random() * cols.length)],
+      w: Math.random() * 12 + 5, h: Math.random() * 7 + 3,
+      rot: Math.random() * 360, rv: (Math.random() - .5) * 20,
+      a: 1, g: .28 + Math.random() * .2
+    }));
+    if (af) cancelAnimationFrame(af); anim();
+  }
+
+  function anim() {
+    cx.clearRect(0, 0, cv.width, cv.height);
+    pts = pts.filter(p => p.a > .02);
+    pts.forEach(p => {
+      p.x += p.vx; p.y += p.vy; p.vy += p.g; p.vx *= .987; p.rot += p.rv;
+      if (p.y > cv.height * .55) p.a -= .022;
+      cx.save(); cx.translate(p.x, p.y); cx.rotate(p.rot * Math.PI / 180);
+      cx.globalAlpha = Math.max(0, p.a); cx.fillStyle = p.col;
+      cx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h); cx.restore();
+    });
+    if (pts.length) af = requestAnimationFrame(anim);
+    else cx.clearRect(0, 0, cv.width, cv.height);
+  }
+  window.addEventListener('resize', rsz);
+  return { fire };
+})();
+
+// ────────────────────────────────────
+// STATE
+// ────────────────────────────────────
+const S = {
+  items: [], nid: 1,
+  lp: null, lpc: 0, lpp: 0,
+  lmc: null, hist: [], eid: null, busy: false,
+  dots: []
+};
+const RAR = ['SSR','SR','R','N'];
+const RC  = { SSR:'#f0c840', SR:'#a07ee0', R:'#5fa0d8', N:'#8b9199' };
+const RB  = { SSR:'rgba(240,200,64,.12)', SR:'rgba(160,126,224,.12)', R:'rgba(95,160,216,.12)', N:'rgba(139,145,153,.10)' };
+
+// ────────────────────────────────────
+// HELPERS
+// ────────────────────────────────────
+const gR   = () => ({ SSR:+V('r-ssr')||0, SR:+V('r-sr')||0, R:+V('r-r')||0, N:+V('r-n')||0 });
+const rT   = r  => +((r.SSR+r.SR+r.R+r.N).toFixed(4));
+const V    = id => document.getElementById(id).value;
+const $    = id => document.getElementById(id);
+const slp  = ms => new Promise(r => setTimeout(r, ms));
+const esc  = s  => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+
+// ────────────────────────────────────
+// RATE
+// ────────────────────────────────────
+function onRC() {
+  const r=gR(), t=rT(r), ok=Math.abs(t-100)<.001, over=t>100.001;
+  const bar=$('tbar'), fill=$('bfill'), txt=$('ttxt'), ico=$('tico');
+  txt.textContent = `Total: ${t.toFixed(2)}%`;
+  fill.style.width = Math.min(t,100)+'%';
+  if(ok) { bar.className='tbar ok'; fill.style.background='var(--green)'; ico.textContent='✅'; }
+  else if(over) { bar.className='tbar err'; fill.style.background='var(--red)'; ico.textContent='❌'; txt.textContent+=' (เกิน!)'; }
+  else { bar.className='tbar warn'; fill.style.background='var(--yel)'; ico.textContent='⚠️'; txt.textContent+=' (ไม่ครบ)'; }
+}
+
+// ────────────────────────────────────
+// VALIDATION
+// ────────────────────────────────────
+function vSim() {
+  const r=gR(), t=rT(r);
+  if(Math.abs(t-100)>.001) return `Rate รวมต้องครบ 100% (ตอนนี้ ${t.toFixed(2)}%)`;
+  for(const x of RAR) if(r[x]>0 && S.items.filter(i=>i.rarity===x).length===0)
+    return `"${x}" มี rate ${r[x]}% แต่ไม่มี item`;
+  return null;
+}
+const showA = (id,m) => { const e=$(id); e.textContent=m; e.className='al al-e show'; };
+const hideA = id => $(id).className='al al-e';
+
+// ────────────────────────────────────
+// ITEM POOL
+// ────────────────────────────────────
+function addItem() {
+  const name=$('iname').value.trim(), rar=$('irar').value;
+  if(!name) { showA('pal','กรุณากรอกชื่อ item'); return; }
+  S.items.push({ id:S.nid++, name, rarity:rar });
+  $('iname').value=''; hideA('pal'); renderPool();
+}
+function delItem(id) { S.items=S.items.filter(i=>i.id!==id); renderPool(); }
+function openE(id) {
+  const it=S.items.find(i=>i.id===id); if(!it) return;
+  S.eid=id; $('en').value=it.name; $('er').value=it.rarity; $('mdl').classList.add('show');
+}
+function closeM() { S.eid=null; $('mdl').classList.remove('show'); }
+function saveE() {
+  const name=$('en').value.trim(), rar=$('er').value; if(!name) return;
+  const it=S.items.find(i=>i.id===S.eid); if(it){it.name=name;it.rarity=rar;}
+  closeM(); renderPool();
+}
+function renderPool() {
+  $('ptags').innerHTML = RAR.map(r => {
+    const c=S.items.filter(i=>i.rarity===r).length;
+    return `<span class="ptag" style="background:${RB[r]};color:${RC[r]}">${r}: ${c}</span>`;
+  }).join('');
+  const b=$('pbody'), tbl=$('ptbl'), emp=$('pemp');
+  if(!S.items.length) { tbl.style.display='none'; emp.style.display='block'; return; }
+  tbl.style.display=''; emp.style.display='none';
+  b.innerHTML = S.items.map((it,i) =>
+    `<tr><td style="color:var(--tx3)">${i+1}</td><td>${esc(it.name)}</td>
+    <td><span class="rp" style="background:${RB[it.rarity]};color:${RC[it.rarity]}">${it.rarity}</span></td>
+    <td style="white-space:nowrap">
+      <button class="btn btn-g" onclick="openE(${it.id})" style="font-size:.72rem;padding:3px 7px;margin-right:4px">✏️</button>
+      <button class="btn btn-d" onclick="delItem(${it.id})" style="font-size:.72rem;padding:3px 7px">🗑️</button>
+    </td></tr>`).join('');
+}
+
+// ────────────────────────────────────
+// SIM ENGINE
+// ────────────────────────────────────
+function bkBrk(rates) { let c=0; return RAR.map(r => { c+=rates[r]; return{r,ceil:c}; }); }
+function pRar(brk) { const x=Math.random()*100; for(const{r,ceil}of brk)if(x<ceil)return r; return brk[brk.length-1].r; }
+function pItm(rar) { const p=S.items.filter(i=>i.rarity===rar); return p.length?p[Math.floor(Math.random()*p.length)].name:'???'; }
+
+function sim(n, rates, pon, px, pi, fon, fx, fy) {
+  const brk=bkBrk(rates); const res=[]; let pity=pi, pd=0, ft=0;
+  for(let i=0;i<n;i++){
+    let rar, isp=false;
+    if(pon&&pity>=px) { rar='SSR'; isp=true; pity=0; }
+    else { rar=pRar(brk); if(pon){if(rar==='SSR')pity=0;else pity++;} }
+    pd++;
+    res.push({roll:res.length+1,rarity:rar,item:pItm(rar),isPity:isp,isFree:false});
+    if(fon&&pd%fx===0)
+      for(let f=0;f<fy;f++){const fr=pRar(brk);res.push({roll:res.length+1,rarity:fr,item:pItm(fr),isPity:false,isFree:true});ft++;}
+  }
+  return{res,ft,fp:pity};
+}
+
+// ────────────────────────────────────
+// SPIN BOX HELPERS
+// ────────────────────────────────────
+function setSpinColor(rar) {
+  const col = RC[rar] || 'var(--tx3)';
+  // corners
+  ['sc-tl','sc-tr','sc-bl','sc-br'].forEach(id => { const e=$(id); if(e) e.style.color=col; });
+  const box = $('sbox');
+  box.style.borderColor = RC[rar] ? col : 'var(--bdr)';
+  box.style.boxShadow   = RC[rar]
+    ? `0 0 20px ${col}30, inset 0 3px 14px rgba(0,0,0,.4)`
+    : 'inset 0 3px 14px rgba(0,0,0,.4)';
+}
+
+// ────────────────────────────────────
+// SPIN ANIMATION — SINGLE ELEMENT, ZERO OVERLAP
+// ────────────────────────────────────
+async function animSpin(target) {
+  const sv = $('sval');
+  const pool = ['N','R','SR','N','R','N','SR','SSR','R','N','SR','R','SSR','N','SR','N','R'];
+  const seq  = [];
+  for(let i=0;i<23;i++) seq.push(pool[Math.floor(Math.random()*pool.length)]);
+  seq.push(target);
+
+  for(let i=0;i<seq.length;i++) {
+    const r = seq[i];
+    // ── Force animation restart: remove class, flush, re-add ──
+    sv.className = 'sval';
+    sv.textContent = r;
+    sv.style.color  = RC[r] || 'var(--tx3)';
+    setSpinColor(r);
+    void sv.offsetWidth;                  // flush reflow
+    sv.className = 'sval tick';
+    const d = i<10?58:i<16?93:i<21?148:215;
+    await slp(d);
+  }
+
+  // Final land — bigger pop
+  sv.className = 'sval';
+  void sv.offsetWidth;
+  sv.className = 'sval land';
+  setSpinColor(target);
+  await slp(560);
+}
+
+// ────────────────────────────────────
+// CHEST ANIMATION
+// ────────────────────────────────────
+function animChest(rar, hard) {
+  return new Promise(resolve => {
+    const chest=$('chest'), glow=$('cglow'), rays=$('rays');
+    chest.classList.add(hard ? 'shake-hard' : 'shake');
+    setTimeout(() => {
+      chest.classList.remove('shake','shake-hard');
+      chest.classList.add('open');
+      // Glow halo
+      const gc={SSR:'rgba(240,200,64,.65)',SR:'rgba(160,126,224,.55)',R:'rgba(95,160,216,.42)',N:'rgba(139,145,153,.28)'};
+      glow.style.cssText=`position:absolute;inset:-28px;border-radius:50%;pointer-events:none;background:radial-gradient(circle,${gc[rar]} 0%,transparent 70%)`;
+      glow.classList.add('on');
+      // Rays
+      const rc=rar==='SSR'?14:rar==='SR'?10:7;
+      rays.style.color=RC[rar];
+      rays.innerHTML=Array.from({length:rc},(_,i)=>
+        `<div class="ray" style="height:${rar==='SSR'?62:44}px;transform:rotate(${360/rc*i}deg) translateY(-${rar==='SSR'?52:34}px)"></div>`
+      ).join('');
+      rays.className='rays on';
+      setTimeout(()=>{rays.className='rays';resolve();},760);
+    }, hard?640:540);
+  });
+}
+function resetChest() { $('chest').classList.remove('open'); $('cglow').style.cssText=''; }
+
+// ────────────────────────────────────
+// RARITY FLASH OVERLAY
+// ────────────────────────────────────
+function doFlash(rar) {
+  const ov=$('rar-ov');
+  const cols={SSR:'rgba(240,200,64,.25)',SR:'rgba(160,126,224,.2)',R:'rgba(95,160,216,.14)',N:'rgba(139,145,153,.1)'};
+  ov.style.background=`radial-gradient(ellipse at center,${cols[rar]} 0%,transparent 68%)`;
+  ov.style.opacity='1';
+  setTimeout(()=>ov.style.opacity='0', 700);
+}
+
+// ────────────────────────────────────
+// SSR BANNER
+// ────────────────────────────────────
+function showSSRBanner() {
+  return new Promise(resolve => {
+    const wrap=$('ssr-wrap'), ban=$('sban');
+    wrap.style.display='flex';
+    ban.className='ssrban';
+    void ban.offsetWidth;
+    ban.className='ssrban show';
+    setTimeout(()=>{
+      ban.style.transition='opacity .4s';
+      ban.style.opacity='0';
+      setTimeout(()=>{wrap.style.display='none';ban.style.cssText='';resolve();},450);
+    },1500);
+  });
+}
+
+// ────────────────────────────────────
+// CARD REVEAL
+// ────────────────────────────────────
+async function revealCard(rar, item, sub) {
+  const wrap=$('rvwrap'), back=$('rvback');
+  // Reset to face-down
+  wrap.className='rv-wrap';
+  void wrap.offsetWidth;
+  $('rvrar').textContent=rar; $('rvrar').style.color=RC[rar];
+  $('rvname').textContent=item; $('rvsub').textContent=sub||'';
+  back.style.borderColor=RC[rar];
+  await slp(80);
+  wrap.classList.add('flip');
+  if(rar==='SSR')     wrap.classList.add('gl-ssr');
+  else if(rar==='SR') wrap.classList.add('gl-sr');
+  else if(rar==='R')  wrap.classList.add('gl-r');
+  await slp(700);
+}
+
+// ────────────────────────────────────
+// PULL DOTS
+// ────────────────────────────────────
+function addDots(results) {
+  results.forEach(r => {
+    S.dots.push(r.rarity);
+    if(S.dots.length>32) S.dots.shift();
+  });
+  $('pdots').innerHTML = S.dots.map((r, i) => {
+    const isNew = i >= S.dots.length - results.length;
+    return `<div class="pull-dot${isNew?' new':''}" style="background:${RC[r]};border-color:${RC[r]}" title="${r}"></div>`;
+  }).join('');
+}
+
+// ────────────────────────────────────
+// MAIN PULL
+// ────────────────────────────────────
+async function runSim() {
+  if(S.busy) return;
+  hideA('sal');
+  const err=vSim(); if(err){showA('sal',err);return;}
+
+  const n=parseInt(V('sn')), cost=parseFloat(V('sc'));
+  if(!n||n<=0){showA('sal','จำนวน rolls ต้องมากกว่า 0');return;}
+  if(isNaN(cost)||cost<0){showA('sal','ราคาต้องไม่ติดลบ');return;}
+
+  S.busy=true;
+  const pb=$('pbtn'); pb.classList.add('busy'); pb.textContent='🎲 Pulling...';
+  $('shint').textContent='🎲 กำลังสุ่ม...'; $('shint').style.color='var(--tx2)';
+  $('rvwrap').className='rv-wrap'; // reset card to face-down
+
+  const rates=gR(), pon=$('pton').checked, px=parseInt(V('px'))||90;
+  const pi=parseInt(V('pinit'))||0, fon=$('fron').checked;
+  const fx=parseInt(V('frx'))||10, fy=parseInt(V('fry'))||1;
+
+  const {res,ft,fp} = sim(n, rates, pon, px, pi, fon, fx, fy);
+  const cnt={SSR:0,SR:0,R:0,N:0}; res.forEach(r=>cnt[r.rarity]++);
+  const best = cnt.SSR>0?'SSR':cnt.SR>0?'SR':cnt.R>0?'R':'N';
+  const feat = res.find(r=>r.rarity===best);
+  const isSSR = cnt.SSR>0, isSR = !isSSR && cnt.SR>0;
+
+  // ── 1. Chest shake + open ──
+  await animChest(best, isSSR);
+
+  // ── 2. Spin reel (clean — single element only) ──
+  await animSpin(best);
+
+  // ── 3. Rarity overlay flash ──
+  doFlash(best);
+
+  // ── 4. SSR special: banner + heavy confetti ──
+  if(isSSR) {
+    CC.fire(true, $('chest'));
+    await showSSRBanner();
+  } else if(isSR) {
+    CC.fire(false, $('chest'));
+    await slp(300);
+  }
+
+  // ── 5. Card flip reveal ──
+  const multi = res.length > 1;
+  await revealCard(best, feat?feat.item:'???', multi?`✨ Best of ${res.length} rolls`:'');
+
+  // ── 6. Pull dots ──
+  addDots(res);
+
+  // ── 7. Save state + render results ──
+  S.lp=res; S.lpc=cost; S.lpp=n;
+  const total=res.length, tc=n*cost;
+  const mc=RAR.reduce((a,b)=>cnt[a]>=cnt[b]?a:b);
+  S.hist.unshift({ts:new Date().toLocaleTimeString(),rolls:n,total,free:ft,cost:tc,cnt:{...cnt},mc});
+  if(S.hist.length>10) S.hist.pop();
+  renderH();
+
+  const ic={}; res.forEach(r=>{if(!ic[r.item])ic[r.item]={rarity:r.rarity,count:0};ic[r.item].count++;});
+  renderRes(cnt,total,n,ft,tc,mc,ic,rates,fp,pon,px);
+
+  $('shint').textContent=`✨ ${cnt.SSR} SSR · ${cnt.SR} SR · ${cnt.R} R · ${cnt.N} N${ft>0?` · +${ft}🆓`:''}`;
+  $('shint').style.color = RC[best];
+
+  S.busy=false; pb.classList.remove('busy'); pb.textContent='⚔️ PULL!';
+  setTimeout(resetChest, 2200);
+}
+
+// ────────────────────────────────────
+// RENDER RESULTS
+// ────────────────────────────────────
+function renderRes(cnt, total, paid, free, tc, mc, ic, rates, fp, pon, px) {
+  $('sres').style.display='block';
+  setTimeout(()=>$('sres').scrollIntoView({behavior:'smooth',block:'nearest'}),120);
+
+  const ss=[
+    {v:cnt.SSR,l:'SSR',c:RC.SSR},{v:cnt.SR,l:'SR',c:RC.SR},
+    {v:cnt.R,l:'R',c:RC.R},{v:cnt.N,l:'N',c:RC.N},
+    {v:paid,l:'Paid Rolls',c:RC.R},{v:free,l:'Free Rolls',c:'var(--green)'},
+    {v:total,l:'Total Rolls',c:'var(--tx)'},
+    {v:tc>0?'฿'+tc.toLocaleString():'Free',l:'Total Cost',c:'var(--yel)'},
+    {v:mc,l:'Most Common',c:RC[mc]}
+  ];
+  if(pon) ss.push({v:fp+'/'+px,l:'Pity Counter',c:RC.SR});
+  $('sstats').innerHTML=ss.map(s=>`<div class="sb"><div class="sv" style="color:${s.c}">${s.v}</div><div class="sl">${s.l}</div></div>`).join('');
+
+  $('schart').innerHTML=RAR.map(r=>{
+    const set=rates[r], act=total>0?(cnt[r]/total*100):0;
+    return`<div class="crow">
+      <div class="clbl" style="color:${RC[r]}">${r}</div>
+      <div class="ctrk"><div class="cbar" style="width:${act}%;background:${RC[r]}"></div><div class="cline" style="left:${set}%"></div></div>
+      <div class="cval"><span style="color:${RC[r]}">${act.toFixed(2)}%</span> <span style="color:var(--tx3)">/ set ${set}%</span></div>
+    </div>`;
+  }).join('')+`<div class="chint">■ bar = actual &nbsp;┆ dashed = set rate</div>`;
+
+  const srt=Object.entries(ic).sort((a,b)=>{const o={SSR:0,SR:1,R:2,N:3};return(o[a[1].rarity]-o[b[1].rarity])||(b[1].count-a[1].count);});
+  $('isum').innerHTML=`<table><thead><tr><th>Item</th><th>Rarity</th><th>Count</th><th>%</th></tr></thead>
+    <tbody>${srt.map(([nm,info])=>`<tr${info.rarity==='SSR'?' class="ssr-row"':''}>
+      <td>${esc(nm)}</td>
+      <td><span class="rp" style="background:${RB[info.rarity]};color:${RC[info.rarity]}">${info.rarity}</span></td>
+      <td>${info.count}</td><td>${(info.count/total*100).toFixed(2)}%</td>
+    </tr>`).join('')}</tbody></table>`;
+}
+
+// ────────────────────────────────────
+// CSV
+// ────────────────────────────────────
+function dl(fn,csv){const b=new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8;'});const u=URL.createObjectURL(b);const a=Object.assign(document.createElement('a'),{href:u,download:fn});document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(u);}
+function expPull(){if(!S.lp){alert('Run Simulation ก่อน');return;}const rows=['Roll No.,Rarity,Item Name,Is Free Roll,Is Pity,Cost (฿)'];S.lp.forEach(r=>rows.push(`${r.roll},${r.rarity},"${r.item}",${r.isFree},${r.isPity},${r.isFree?0:S.lpc}`));dl('gacha_pull.csv',rows.join('\n'));}
+function expSum(){if(!S.lp){alert('Run Simulation ก่อน');return;}const res=S.lp,rates=gR(),cnt={SSR:0,SR:0,R:0,N:0};res.forEach(r=>cnt[r.rarity]++);const total=res.length,paid=res.filter(r=>!r.isFree).length,fr=res.filter(r=>r.isFree).length;const rows=['Metric,Value',`Budget (฿),${paid*S.lpc}`,`Cost per Roll (฿),${S.lpc}`,`Paid Rolls,${paid}`,`Free Rolls,${fr}`,`Total Rolls,${total}`,`Simulation Count,1`,...RAR.map(r=>`${r} Count,${cnt[r]}`),...RAR.map(r=>`${r} Rate (set),${rates[r]}%`),...RAR.map(r=>`${r} Rate (actual),${(cnt[r]/total*100).toFixed(2)}%`)];dl('gacha_summary.csv',rows.join('\n'));}
+
+// ────────────────────────────────────
+// MONTE CARLO
+// ────────────────────────────────────
+function calcP(){const b=parseFloat(V('mcb'))||0,p=parseFloat(V('mcp'))||1;$('pdsp').textContent=p>0?Math.floor(b/p):0;}
+function runMC(){
+  hideA('mcal');const err=vSim();if(err){showA('mcal',err);return;}
+  const b=parseFloat(V('mcb')),p=parseFloat(V('mcp')),rds=parseInt(V('mcr'));
+  if(isNaN(b)||b<0){showA('mcal','งบต้องไม่ติดลบ');return;}
+  if(isNaN(p)||p<=0){showA('mcal','ราคาต้องมากกว่า 0');return;}
+  if(isNaN(rds)||rds<=0){showA('mcal','Rounds ต้องมากกว่า 0');return;}
+  const pr=Math.floor(b/p);if(pr<1){showA('mcal','งบน้อยเกินไป');return;}
+  const rates=gR(),pon=$('pton').checked,px=parseInt(V('px'))||90;
+  const fon=$('fron').checked,fx=parseInt(V('frx'))||10,fy=parseInt(V('fry'))||1;
+  const sc=[];let a1=0,z=0;
+  for(let i=0;i<rds;i++){
+    const{res}=sim(pr,rates,pon,px,0,fon,fx,fy);
+    const c=res.filter(r=>r.rarity==='SSR').length;
+    sc.push(c);if(c>=1)a1++;else z++;
+  }
+  const avg=sc.reduce((a,b)=>a+b,0)/rds;
+  const srt=[...sc].sort((a,b)=>a-b);
+  const fp2=fon?Math.floor(pr/fx)*fy:0;
+  S.lmc={b,p,pr,fp2,tp:pr+fp2,rds,pa:(a1/rds*100).toFixed(2),pz:(z/rds*100).toFixed(2),avg,best:srt[srt.length-1],worst:srt[0],med:srt[Math.floor(rds/2)],rates};
+  renderMC(S.lmc);
+}
+function renderMC(d){
+  $('mcres').style.display='block';
+  const ss=[{v:d.pr,l:'Paid Rolls',c:RC.R},{v:d.fp2,l:'Free Rolls',c:'var(--green)'},{v:d.tp,l:'Total Rolls',c:'var(--tx)'},{v:d.pa+'%',l:'% ได้ SSR ≥1',c:RC.SSR},{v:d.pz+'%',l:'% ได้ 0 SSR',c:'var(--red)'},{v:d.avg.toFixed(2),l:'Avg SSR/Round',c:RC.SSR},{v:d.best,l:'Best SSR',c:'var(--green)'},{v:d.worst,l:'Worst SSR',c:'var(--red)'},{v:d.med,l:'Median SSR',c:'var(--yel)'}];
+  $('mcstats').innerHTML=ss.map(s=>`<div class="sb"><div class="sv" style="color:${s.c}">${s.v}</div><div class="sl">${s.l}</div></div>`).join('');
+  $('mcins').innerHTML=`<h4>🔍 Insight</h4>${bldIns(d)}`;
+}
+function bldIns(d){
+  const lines=[],exp=d.rates.SSR>0?Math.round(100/d.rates.SSR):'∞',pct=parseFloat(d.pa);
+  lines.push(`<p>งบ ฿${d.b.toLocaleString()} = <strong>${d.pr} paid rolls</strong>${d.fp2>0?` + ${d.fp2} free = ${d.tp} total`:''}</p>`);
+  if(pct>=90)lines.push(`<p>✅ <strong>โอกาสสูงมาก:</strong> ${d.pa}% ได้ SSR — คุ้มมาก</p>`);
+  else if(pct>=70)lines.push(`<p>🟡 <strong>โอกาสดี:</strong> ${d.pa}% ได้ SSR</p>`);
+  else if(pct>=50)lines.push(`<p>⚠️ <strong>พอสู้ได้:</strong> ${d.pa}% — ครึ่งต่อครึ่ง</p>`);
+  else lines.push(`<p>❌ <strong>เสี่ยงสูง:</strong> ${d.pa}% ได้ SSR — งบน้อยเกินไป</p>`);
+  lines.push(`<p>เฉลี่ย <strong>${d.avg.toFixed(2)} SSR/round</strong> | max ${d.best} | min ${d.worst} | median ${d.med}</p>`);
+  if(d.rates.SSR>0) lines.push(`<p>ทฤษฎี: เฉลี่ย <strong>${exp} rolls</strong> ต่อ SSR 1 ตัว</p>`);
+  if(parseFloat(d.pz)>40) lines.push(`<p>⚠️ ${d.pz}% ไม่ได้ SSR เลย — ควรเปิด Pity System</p>`);
+  return lines.join('');
+}
+function expMC(){if(!S.lmc){alert('Run Monte Carlo ก่อน');return;}const d=S.lmc;const rows=['Metric,Value',`Budget (฿),${d.b}`,`Cost per Roll (฿),${d.p}`,`Paid Rolls,${d.pr}`,`Free Rolls per Round,${d.fp2}`,`Total Rolls per Round,${d.tp}`,`Simulation Rounds,${d.rds}`,`% Got ≥1 SSR,${d.pa}%`,`% Got 0 SSR,${d.pz}%`,`Average SSR per Round,${d.avg.toFixed(4)}`,`Best SSR,${d.best}`,`Worst SSR,${d.worst}`,`Median SSR,${d.med}`,`SSR Rate (set),${d.rates.SSR}%`,`Expected Rolls per SSR,${d.rates.SSR>0?Math.round(100/d.rates.SSR):'N/A'}`];dl('gacha_player_pov.csv',rows.join('\n'));}
+
+// ────────────────────────────────────
+// HISTORY
+// ────────────────────────────────────
+function renderH(){
+  const el=$('hlist');
+  if(!S.hist.length){el.innerHTML='<div class="empty"><div class="ei">🕓</div>ยังไม่มีประวัติ</div>';return;}
+  el.innerHTML=S.hist.map(h=>`
+    <div class="hi">
+      <div>
+        <div style="font-weight:600">
+          ${h.rolls} rolls → <span style="color:${RC.SSR}">${h.cnt.SSR} SSR</span> /
+          <span style="color:${RC.SR}">${h.cnt.SR} SR</span> /
+          <span style="color:${RC.R}">${h.cnt.R} R</span> /
+          <span style="color:${RC.N}">${h.cnt.N} N</span>
+          ${h.free>0?`<span style="color:var(--green)"> +${h.free}🆓</span>`:''}
+        </div>
+        <div class="hm">${h.ts} · ${h.cost>0?'฿'+h.cost.toLocaleString():'Free'}</div>
+      </div>
+      <span class="rp" style="background:${RB[h.mc]};color:${RC[h.mc]}">${h.mc}</span>
+    </div>`).join('');
+}
+function clearH(){if(!S.hist.length)return;if(confirm('ล้างประวัติ?')){S.hist=[];renderH();}}
+
+// ────────────────────────────────────
+// MISC / INIT
+// ────────────────────────────────────
+function ts(t,s){$(s).style.display=$(t).checked?'block':'none';}
+$('iname').addEventListener('keydown',e=>{if(e.key==='Enter')addItem();});
+$('en').addEventListener('keydown',e=>{if(e.key==='Enter')saveE();});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeM();});
+$('mdl').addEventListener('click',e=>{if(e.target===$('mdl'))closeM();});
+
+// Sample items
+[{name:'Dragon Knight',rarity:'SSR'},{name:'Shadow Empress',rarity:'SSR'},
+ {name:'Iron Paladin',rarity:'SR'},{name:'Storm Archer',rarity:'SR'},{name:'Forest Witch',rarity:'SR'},
+ {name:'Town Guard',rarity:'R'},{name:'Village Healer',rarity:'R'},{name:'Tavern Bard',rarity:'R'},
+ {name:'Farmhand',rarity:'N'},{name:'Stable Boy',rarity:'N'}]
+.forEach(i=>S.items.push({id:S.nid++,...i}));
+
+onRC(); renderPool(); calcP();
+// Init spin box corners to default color
+setSpinColor(null);
+</script>
+</body>
+</html>
