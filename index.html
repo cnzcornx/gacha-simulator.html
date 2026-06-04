@@ -1,0 +1,823 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🎰 Gacha Drop Rate Simulator</title>
+<style>
+:root {
+  --bg: #0a0a14;
+  --surface: #12121f;
+  --surface2: #1a1a2e;
+  --border: #2a2a4a;
+  --text: #e0e0ff;
+  --dim: #7777aa;
+  --accent: #7c3aed;
+  --accent2: #a855f7;
+  --ssr: #fbbf24; --sr: #c084fc; --r: #60a5fa; --n: #9ca3af;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+
+.hdr{background:linear-gradient(135deg,#12121f,#1a1a2e);border-bottom:1px solid var(--border);padding:14px 24px}
+.hdr h1{font-size:1.4rem;background:linear-gradient(90deg,var(--ssr),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.hdr p{color:var(--dim);font-size:0.8rem;margin-top:2px}
+
+.tabs{display:flex;gap:4px;padding:10px 24px;background:var(--surface);border-bottom:1px solid var(--border);flex-wrap:wrap}
+.tb{padding:7px 18px;border:1px solid var(--border);border-radius:8px;background:transparent;color:var(--dim);cursor:pointer;font-size:0.85rem;transition:all .2s}
+.tb:hover{background:var(--border);color:var(--text)}
+.tb.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+
+.wrap{max-width:1100px;margin:0 auto;padding:20px}
+.tab{display:none}.tab.on{display:block}
+.panel{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px;margin-bottom:18px}
+.panel h2{font-size:1rem;margin-bottom:14px;color:var(--accent2)}
+
+input[type=text],input[type=number],select{background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:7px 11px;border-radius:8px;font-size:0.88rem;width:100%}
+select option{background:var(--surface2)}
+.fg label{display:block;font-size:0.8rem;color:var(--dim);margin-bottom:4px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+
+.btn{padding:7px 15px;border:none;border-radius:8px;cursor:pointer;font-size:0.85rem;font-weight:600;transition:all .2s}
+.btn-p{background:var(--accent);color:#fff}.btn-p:hover{background:var(--accent2)}
+.btn-g{background:#14532d;color:#4ade80}.btn-g:hover{background:#166534}
+.btn-d{background:#450a0a;color:#f87171}.btn-d:hover{background:#7f1d1d}
+.btn-o{background:linear-gradient(135deg,#92400e,#d97706);color:#fff}.btn-o:hover{filter:brightness(1.1)}
+.btn-roll{width:100%;padding:15px;font-size:1.15rem;font-weight:700;border:none;border-radius:12px;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;cursor:pointer;box-shadow:0 4px 24px #7c3aed55;transition:all .2s;margin-top:8px;letter-spacing:1px}
+.btn-roll:hover{transform:scale(1.02);box-shadow:0 6px 36px #a855f777}
+.btn-roll:active{transform:scale(0.97)}
+
+.rb{display:inline-block;padding:3px 9px;border-radius:6px;font-weight:700;font-size:0.8rem}
+.rb.SSR{background:linear-gradient(135deg,#92400e,#fbbf24);color:#fff}
+.rb.SR{background:linear-gradient(135deg,#6b21a8,#c084fc);color:#fff}
+.rb.R{background:linear-gradient(135deg,#1e40af,#60a5fa);color:#fff}
+.rb.N{background:linear-gradient(135deg,#374151,#9ca3af);color:#fff}
+
+.rate-row{display:flex;align-items:center;gap:12px;margin-bottom:10px}
+input[type=range]{flex:1;height:6px;border-radius:3px;background:var(--border);outline:none;-webkit-appearance:none}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:var(--accent2);cursor:pointer}
+.rate-num{width:65px;text-align:center}
+.rate-total{display:flex;justify-content:space-between;padding:10px 14px;border-radius:8px;font-weight:600;margin-top:6px}
+.rt-ok{background:#052e16;color:#4ade80;border:1px solid #166534}
+.rt-err{background:#2d0a0a;color:#f87171;border:1px solid #7f1d1d}
+
+.stat-card{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:14px;text-align:center}
+.stat-card .v{font-size:1.8rem;font-weight:700}
+.stat-card .l{font-size:0.72rem;color:var(--dim);margin-top:3px}
+
+.tbl{width:100%;border-collapse:collapse}
+.tbl th{background:var(--surface2);padding:8px 12px;text-align:left;font-size:0.78rem;color:var(--dim)}
+.tbl td{padding:8px 12px;border-bottom:1px solid var(--border);font-size:0.85rem}
+.tbl tr:hover td{background:var(--surface2)}
+.tbl tr.SSR td:first-child{color:var(--ssr);font-weight:700}
+.tbl tr.SR td:first-child{color:var(--sr);font-weight:700}
+.tbl tr.R td:first-child{color:var(--r);font-weight:700}
+.tbl tr.N td:first-child{color:var(--n)}
+
+.chip{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;font-size:0.8rem;font-weight:600;margin:2px}
+.chip.SSR{background:#92400e33;color:var(--ssr);border:1px solid #92400e}
+.chip.SR{background:#6b21a833;color:var(--sr);border:1px solid #6b21a8}
+.chip.R{background:#1e40af33;color:var(--r);border:1px solid #1e40af}
+.chip.N{background:#37415133;color:var(--n);border:1px solid #374151}
+.chip button{background:none;border:none;color:inherit;cursor:pointer;font-size:0.85rem;opacity:.7}
+.chip button:hover{opacity:1}
+
+.pbar{height:8px;border-radius:4px;background:var(--border);overflow:hidden}
+.pbar-fill{height:100%;border-radius:4px;transition:width .5s}
+
+.tog-row{display:flex;align-items:center;justify-content:space-between;padding:8px 0}
+.tog{position:relative;width:44px;height:24px;flex-shrink:0}
+.tog input{opacity:0;width:0;height:0}
+.tog-sl{position:absolute;inset:0;background:var(--border);border-radius:12px;cursor:pointer;transition:.3s}
+.tog-sl::before{content:'';position:absolute;width:18px;height:18px;left:3px;top:3px;border-radius:50%;background:#fff;transition:.3s}
+.tog input:checked+.tog-sl{background:var(--accent)}
+.tog input:checked+.tog-sl::before{transform:translateX(20px)}
+
+.rtabs{display:flex;gap:4px;margin-bottom:12px}
+.rtb{padding:5px 14px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--dim);cursor:pointer;font-size:0.82rem}
+.rtb.on{background:var(--surface2);color:var(--text);border-color:var(--accent)}
+
+.alert{padding:9px 13px;border-radius:8px;font-size:0.83rem;margin-bottom:10px}
+.alert.ok{background:#052e16;color:#4ade80;border:1px solid #166534}
+.alert.err{background:#2d0a0a;color:#f87171;border:1px solid #7f1d1d}
+.alert.hide{display:none}
+
+.pity-row{display:flex;align-items:center;gap:10px;padding:9px 12px;background:var(--surface2);border-radius:8px;margin-bottom:10px;font-size:0.85rem}
+
+.hist-item{display:flex;justify-content:space-between;align-items:center;padding:9px 12px;border-bottom:1px solid var(--border);font-size:0.82rem}
+.hist-item:hover{background:var(--surface2)}
+
+.cbar-row{display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:0.83rem}
+.cbar-label{width:32px;font-weight:700}
+.cbar-fill{height:22px;border-radius:4px;display:flex;align-items:center;padding:0 7px;color:#fff;font-size:0.75rem;min-width:4px;transition:width .6s}
+
+/* ===== OVERLAY ===== */
+.overlay{position:fixed;inset:0;background:rgba(5,5,15,.93);z-index:1000;display:flex;flex-direction:column;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .35s}
+.overlay.on{opacity:1;pointer-events:all}
+
+/* Orb */
+.orb-wrap{display:flex;flex-direction:column;align-items:center;gap:16px}
+.orb-stage{position:relative;width:220px;height:220px;display:flex;align-items:center;justify-content:center}
+.orb{width:120px;height:120px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#c084fc 0%,#6d28d9 40%,#1e0a3c 100%);box-shadow:0 0 40px #a855f7,0 0 80px #7c3aed44;animation:orbPulse .75s ease-in-out infinite alternate;font-size:3rem;display:flex;align-items:center;justify-content:center;position:relative;z-index:2}
+@keyframes orbPulse{from{transform:scale(1);box-shadow:0 0 40px #a855f7,0 0 80px #7c3aed44}to{transform:scale(1.1);box-shadow:0 0 70px #c084fc,0 0 140px #a855f766}}
+.orbit-ring{position:absolute;inset:0;border-radius:50%;border:1px solid #a855f733;animation:orbitSpin 3s linear infinite}
+.orbit-ring:nth-child(2){inset:-20px;border-color:#fbbf2422;animation-duration:4s;animation-direction:reverse}
+.orbit-ring:nth-child(3){inset:-40px;border-color:#60a5fa22;animation-duration:6s}
+@keyframes orbitSpin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+.orb-dot{position:absolute;width:8px;height:8px;border-radius:50%;top:50%;left:50%;transform-origin:0 0;animation:dotOrbit 2s linear infinite}
+@keyframes dotOrbit{from{transform:rotate(var(--s)) translateX(var(--r))}to{transform:rotate(calc(var(--s)+360deg)) translateX(var(--r))}}
+.orb-title{color:#fff;font-size:1.1rem;font-weight:600;letter-spacing:2px;animation:pulse 1s ease-in-out infinite alternate}
+@keyframes pulse{from{opacity:.6}to{opacity:1}}
+.orb-sub{color:var(--dim);font-size:0.88rem}
+.skip-btn{background:transparent;border:1px solid var(--border);color:var(--dim);padding:6px 20px;border-radius:6px;cursor:pointer;font-size:0.82rem;transition:all .2s}
+.skip-btn:hover{color:var(--text);border-color:var(--dim)}
+
+/* Cards */
+.reveal-wrap{display:none;flex-direction:column;align-items:center;width:100%}
+.reveal-title{color:#fff;font-size:1rem;margin-bottom:12px;letter-spacing:1px}
+.reveal-area{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;max-width:820px;max-height:56vh;overflow-y:auto;padding:8px}
+.reveal-btns{display:flex;gap:10px;margin-top:14px}
+
+.gc{width:82px;height:110px;border-radius:10px;perspective:700px;cursor:pointer;flex-shrink:0}
+.gc-inner{width:100%;height:100%;position:relative;transform-style:preserve-3d;transition:transform .6s cubic-bezier(.175,.885,.32,1.275)}
+.gc.flip .gc-inner{transform:rotateY(180deg)}
+.gc-f,.gc-b{position:absolute;inset:0;border-radius:10px;backface-visibility:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px}
+.gc-f{background:linear-gradient(145deg,#1a1a35,#2a2a5a);border:2px solid #3a3a7a;font-size:2rem;transition:transform .1s}
+.gc-f:hover{transform:translateY(-3px)}
+.gc-b{transform:rotateY(180deg)}
+.gc-b.SSR{background:linear-gradient(145deg,#78350f,#d97706,#fbbf24);border:2px solid #fbbf24;box-shadow:0 0 20px #fbbf2466}
+.gc-b.SR{background:linear-gradient(145deg,#4c1d95,#7e22ce,#c084fc);border:2px solid #c084fc;box-shadow:0 0 16px #c084fc55}
+.gc-b.R{background:linear-gradient(145deg,#1e3a8a,#2563eb,#60a5fa);border:2px solid #60a5fa}
+.gc-b.N{background:linear-gradient(145deg,#1f2937,#4b5563,#9ca3af);border:2px solid #9ca3af}
+.gc-rar{font-size:0.58rem;font-weight:700;color:rgba(255,255,255,.9);position:absolute;top:5px;left:5px;background:rgba(0,0,0,.4);padding:1px 4px;border-radius:3px}
+.gc-name{font-size:0.52rem;color:rgba(255,255,255,.9);text-align:center;padding:0 4px;position:absolute;bottom:5px;left:0;right:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gc-shine{position:absolute;inset:0;border-radius:8px;background:linear-gradient(145deg,rgba(255,255,255,.25) 0%,transparent 55%);pointer-events:none}
+
+/* SSR glow anim */
+@keyframes ssrPop{0%{box-shadow:0 0 20px #fbbf24,0 0 40px #f59e0b}50%{box-shadow:0 0 50px #fbbf24,0 0 100px #f59e0b,0 0 150px #fbbf2444}100%{box-shadow:0 0 20px #fbbf24,0 0 40px #f59e0b}}
+.gc.ssr-glow .gc-inner{animation:ssrPop 1s ease-in-out 2}
+
+/* Confetti & flash */
+.cfw{position:fixed;inset:0;pointer-events:none;z-index:999;overflow:hidden}
+.cf{position:absolute;animation:cfFall linear forwards}
+@keyframes cfFall{from{transform:translateY(-20px) rotate(0);opacity:1}to{transform:translateY(100vh) rotate(720deg);opacity:0}}
+.flash{position:fixed;inset:0;z-index:998;pointer-events:none;opacity:0;transition:opacity .08s}
+.flash.on{opacity:1}
+
+@media(max-width:640px){.grid2,.grid3,.grid4{grid-template-columns:1fr 1fr}.grid3{grid-template-columns:1fr}.grid4{grid-template-columns:1fr 1fr}}
+::-webkit-scrollbar{width:5px;height:5px}::-webkit-scrollbar-track{background:var(--surface)}::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <h1>🎰 Gacha Drop Rate Simulator</h1>
+  <p>ออกแบบ rate · จัดการ item pool · จำลองการสุ่มด้วย Monte Carlo</p>
+</div>
+
+<div class="tabs">
+  <button class="tb on" onclick="showTab('sim',this)">🎰 Simulation</button>
+  <button class="tb" onclick="showTab('rate',this)">⚙️ Rate Setting</button>
+  <button class="tb" onclick="showTab('pool',this)">🎒 Item Pool</button>
+  <button class="tb" onclick="showTab('pov',this)">👤 Player POV</button>
+  <button class="tb" onclick="showTab('hist',this)">📜 History</button>
+</div>
+
+<div class="wrap">
+
+<!-- RATE SETTING -->
+<div id="tab-rate" class="tab">
+  <div class="panel">
+    <h2>⚙️ ตั้งค่า Drop Rate</h2>
+    <div class="rate-row">
+      <span class="rb SSR" style="width:46px;text-align:center">SSR</span>
+      <input type="range" id="sl-SSR" min="0" max="100" step="0.1" value="3" oninput="syncRate('SSR')">
+      <input type="number" id="in-SSR" class="rate-num" value="3" min="0" max="100" step="0.1" oninput="syncRate('SSR',1)">%
+    </div>
+    <div class="rate-row">
+      <span class="rb SR" style="width:46px;text-align:center">SR</span>
+      <input type="range" id="sl-SR" min="0" max="100" step="0.1" value="12" oninput="syncRate('SR')">
+      <input type="number" id="in-SR" class="rate-num" value="12" min="0" max="100" step="0.1" oninput="syncRate('SR',1)">%
+    </div>
+    <div class="rate-row">
+      <span class="rb R" style="width:46px;text-align:center">R</span>
+      <input type="range" id="sl-R" min="0" max="100" step="0.1" value="35" oninput="syncRate('R')">
+      <input type="number" id="in-R" class="rate-num" value="35" min="0" max="100" step="0.1" oninput="syncRate('R',1)">%
+    </div>
+    <div class="rate-row">
+      <span class="rb N" style="width:46px;text-align:center">N</span>
+      <input type="range" id="sl-N" min="0" max="100" step="0.1" value="50" oninput="syncRate('N')">
+      <input type="number" id="in-N" class="rate-num" value="50" min="0" max="100" step="0.1" oninput="syncRate('N',1)">%
+    </div>
+    <div id="rate-total" class="rate-total rt-ok">
+      <span>รวม Drop Rate</span><span id="rate-total-val">100.0%</span>
+    </div>
+  </div>
+  <div class="panel">
+    <h2>📊 Rate Visualization</h2>
+    <div id="rate-chart"></div>
+  </div>
+</div>
+
+<!-- ITEM POOL -->
+<div id="tab-pool" class="tab">
+  <div class="panel">
+    <h2>➕ เพิ่ม Item</h2>
+    <div id="pool-alert" class="alert hide"></div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px">
+      <input type="text" id="item-name" placeholder="ชื่อ item..." style="flex:1;min-width:160px" onkeydown="if(event.key==='Enter')addItem()">
+      <select id="item-rar" style="width:130px">
+        <option value="SSR">⭐⭐⭐ SSR</option>
+        <option value="SR">⭐⭐ SR</option>
+        <option value="R" selected>⭐ R</option>
+        <option value="N">○ N</option>
+      </select>
+      <button class="btn btn-p" onclick="addItem()">+ เพิ่ม</button>
+      <button class="btn btn-g" onclick="loadDefaults()">📦 Default Items</button>
+      <button class="btn btn-d" onclick="clearPool()">🗑 ล้าง</button>
+    </div>
+  </div>
+  <div class="panel">
+    <h2>🎒 Item Pool</h2>
+    <div id="pool-display"></div>
+  </div>
+</div>
+
+<!-- SIMULATION -->
+<div id="tab-sim" class="tab on">
+  <div class="panel">
+    <h2>⚙️ ตั้งค่าการสุ่ม</h2>
+    <div id="sim-alert" class="alert hide"></div>
+    <div id="pity-ui" class="pity-row" style="display:none">
+      <span>💫 Pity</span>
+      <div style="flex:1"><div class="pbar"><div id="pity-fill" class="pbar-fill" style="background:linear-gradient(90deg,#fbbf24,#f59e0b);width:0%"></div></div></div>
+      <span id="pity-txt">0 / 90</span>
+    </div>
+    <div class="grid2" style="margin-bottom:12px">
+      <div class="fg"><label>จำนวนครั้งที่สุ่ม</label><input type="number" id="roll-count" value="10" min="1" max="10000"></div>
+      <div class="fg"><label>ราคาต่อ roll (เหรียญ)</label><input type="number" id="roll-price" value="160" min="0"></div>
+    </div>
+    <div class="tog-row">
+      <span style="font-size:.85rem">💫 Pity System <span style="color:var(--dim)">(SSR รับประกันทุก 90 pulls)</span></span>
+      <label class="tog"><input type="checkbox" id="pity-tog" onchange="onPityToggle()"><span class="tog-sl"></span></label>
+    </div>
+    <button class="btn-roll" onclick="doRoll()">🎰 สุ่ม Gacha!</button>
+  </div>
+  <div id="sim-results" style="display:none">
+    <div class="panel">
+      <div class="grid4" id="result-cards" style="margin-bottom:16px"></div>
+      <div class="rtabs">
+        <button class="rtb on" onclick="showRTab('table',this)">📊 ตาราง</button>
+        <button class="rtb" onclick="showRTab('items',this)">🎁 Items</button>
+        <button class="rtb" onclick="showRTab('chart',this)">📈 กราฟ</button>
+      </div>
+      <div id="rt-table"></div>
+      <div id="rt-items" style="display:none"></div>
+      <div id="rt-chart" style="display:none"></div>
+      <div style="display:flex;gap:10px;margin-top:14px;flex-wrap:wrap">
+        <button class="btn btn-g" onclick="exportCSV()">📥 Export CSV</button>
+        <button class="btn btn-p" onclick="copyResult()">📋 Copy ผล</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PLAYER POV -->
+<div id="tab-pov" class="tab">
+  <div class="panel">
+    <h2>👤 Player POV — Monte Carlo</h2>
+    <div class="grid2" style="margin-bottom:12px">
+      <div class="fg"><label>งบประมาณ (เหรียญ)</label><input type="number" id="pov-budget" value="10000" min="1"></div>
+      <div class="fg"><label>ราคาต่อ roll</label><input type="number" id="pov-price" value="160" min="1"></div>
+      <div class="fg"><label>จำนวน simulation รอบ</label><input type="number" id="pov-sims" value="1000" min="10" max="100000"></div>
+      <div class="fg"><label>SSR เป้าหมาย (อย่างน้อย)</label><input type="number" id="pov-target" value="1" min="1"></div>
+    </div>
+    <div class="tog-row">
+      <span style="font-size:.85rem">🎁 Free Roll Rule</span>
+      <label class="tog"><input type="checkbox" id="free-tog" onchange="onFreeToggle()"><span class="tog-sl"></span></label>
+    </div>
+    <div id="free-settings" style="display:none;margin:10px 0">
+      <div class="grid2">
+        <div class="fg"><label>Paid rolls ที่ต้องจ่ายก่อน</label><input type="number" id="free-req" value="10" min="1"></div>
+        <div class="fg"><label>Free rolls ที่ได้รับ</label><input type="number" id="free-grant" value="1" min="1"></div>
+      </div>
+    </div>
+    <button class="btn btn-o" style="width:100%;padding:12px;font-size:1rem;margin-top:6px;border-radius:10px" onclick="runMC()">🔬 รัน Monte Carlo Simulation</button>
+  </div>
+  <div id="pov-out" style="display:none">
+    <div class="panel">
+      <h2>📊 ผลการ Simulation</h2>
+      <div class="grid3" id="pov-cards" style="margin-bottom:14px"></div>
+      <div id="pov-detail"></div>
+      <button class="btn btn-g" style="margin-top:12px" onclick="exportPOV()">📥 Export POV CSV</button>
+    </div>
+  </div>
+</div>
+
+<!-- HISTORY -->
+<div id="tab-hist" class="tab">
+  <div class="panel">
+    <h2>📜 Pull History</h2>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <span id="hist-count" style="color:var(--dim);font-size:.82rem"></span>
+      <button class="btn btn-d" onclick="clearHist()">🗑 ล้างประวัติ</button>
+    </div>
+    <div id="hist-list" style="max-height:500px;overflow-y:auto"></div>
+  </div>
+</div>
+
+</div>
+
+<!-- OVERLAY -->
+<div id="overlay" class="overlay">
+  <div id="ph-orb" class="orb-wrap">
+    <div class="orb-stage">
+      <div class="orbit-ring"></div>
+      <div class="orbit-ring"></div>
+      <div class="orbit-ring"></div>
+      <div class="orb">🔮</div>
+    </div>
+    <div class="orb-title" id="orb-title">กำลังสุ่ม...</div>
+    <div class="orb-sub" id="orb-sub"></div>
+    <button class="skip-btn" onclick="skipAnim()">⏭ Skip</button>
+  </div>
+  <div id="ph-reveal" class="reveal-wrap">
+    <div class="reveal-title">🎴 แตะการ์ดเพื่อเปิด!</div>
+    <div class="reveal-area" id="reveal-area"></div>
+    <div class="reveal-btns">
+      <button class="skip-btn" onclick="flipAll()">🔓 เปิดทั้งหมด</button>
+      <button class="skip-btn" id="done-btn" style="display:none;color:#4ade80;border-color:#4ade80" onclick="closeOverlay()">✓ ดูผล</button>
+    </div>
+  </div>
+</div>
+
+<div class="cfw" id="cfw"></div>
+<div class="flash" id="flash"></div>
+
+<script>
+const RARS=['SSR','SR','R','N'];
+const RC={SSR:'#fbbf24',SR:'#c084fc',R:'#60a5fa',N:'#9ca3af'};
+let rates={SSR:3,SR:12,R:35,N:50};
+let pool={SSR:[],SR:[],R:[],N:[]};
+let history=[];
+let lastRolls=null;
+let pityOn=false,pityCount=0;
+let povData=null;
+let _anim=[],_skipped=false,_gcFlipped=0,_gcTotal=0;
+
+// ---- TABS ----
+function showTab(id,btn){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));
+  document.querySelectorAll('.tb').forEach(b=>b.classList.remove('on'));
+  document.getElementById('tab-'+id).classList.add('on');
+  btn.classList.add('on');
+  if(id==='pool')renderPool();
+  if(id==='hist')renderHist();
+}
+function showRTab(id,btn){
+  document.querySelectorAll('.rtb').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+  ['table','items','chart'].forEach(t=>document.getElementById('rt-'+t).style.display=t===id?'block':'none');
+}
+
+// ---- RATE ----
+function syncRate(r,fromInput){
+  const sl=document.getElementById('sl-'+r),inp=document.getElementById('in-'+r);
+  if(fromInput){sl.value=inp.value;rates[r]=parseFloat(inp.value)||0;}
+  else{inp.value=parseFloat(sl.value).toFixed(1);rates[r]=parseFloat(sl.value);}
+  updateTotal();renderChart();
+}
+function updateTotal(){
+  const tot=RARS.reduce((a,r)=>a+(rates[r]||0),0);
+  const ok=Math.abs(tot-100)<0.05;
+  document.getElementById('rate-total').className='rate-total '+(ok?'rt-ok':'rt-err');
+  document.getElementById('rate-total-val').textContent=tot.toFixed(1)+'%';
+}
+function rateOk(){return Math.abs(RARS.reduce((a,r)=>a+rates[r],0)-100)<0.05;}
+function renderChart(){
+  document.getElementById('rate-chart').innerHTML=RARS.map(r=>
+    `<div class="cbar-row">
+      <span class="cbar-label" style="color:${RC[r]}">${r}</span>
+      <div style="flex:1;background:var(--border);border-radius:4px;height:26px;overflow:hidden">
+        <div class="cbar-fill" style="background:${RC[r]};width:${Math.min(100,rates[r])}%">${rates[r]>8?rates[r].toFixed(1)+'%':''}</div>
+      </div>
+      <span style="width:52px;text-align:right">${rates[r].toFixed(1)}%</span>
+    </div>`).join('');
+}
+
+// ---- POOL ----
+function addItem(){
+  const name=document.getElementById('item-name').value.trim();
+  const rar=document.getElementById('item-rar').value;
+  if(!name)return showAlert('pool-alert','กรุณาใส่ชื่อ item','err');
+  if(pool[rar].includes(name))return showAlert('pool-alert',`"${name}" มีใน ${rar} แล้ว`,'err');
+  pool[rar].push(name);
+  document.getElementById('item-name').value='';
+  showAlert('pool-alert',`✓ เพิ่ม "${name}" (${rar}) แล้ว`,'ok');
+  renderPool();
+}
+function removeItem(r,i){pool[r].splice(i,1);renderPool();}
+function clearPool(){if(confirm('ล้าง item pool ทั้งหมด?')){RARS.forEach(r=>pool[r]=[]);renderPool();}}
+function loadDefaults(){
+  const d={
+    SSR:['Excalibur','Dragon Wing','Phoenix Blade','Void Scepter','Shadow Crown'],
+    SR:['Silver Arrow','Moon Staff','Thunder Shield','Iron Crown','Dark Cloak','Storm Blade'],
+    R:['Steel Sword','Wooden Staff','Leather Armor','Iron Boots','Chain Mail','Short Bow','War Axe'],
+    N:['Potion','Scroll','Stone Ring','Old Coin','Rusty Dagger','Herb','Torn Map','Glass Bead']
+  };
+  RARS.forEach(r=>d[r].forEach(x=>{if(!pool[r].includes(x))pool[r].push(x);}));
+  showAlert('pool-alert','✓ โหลด default items สำเร็จ','ok');
+  renderPool();
+}
+function renderPool(){
+  document.getElementById('pool-display').innerHTML=RARS.map(r=>`
+    <div style="margin-bottom:14px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:7px">
+        <span class="rb ${r}">${r}</span>
+        <span style="color:var(--dim);font-size:.8rem">${pool[r].length} items</span>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:4px">
+        ${pool[r].length===0
+          ?`<span style="color:var(--dim);font-size:.8rem;padding:4px 8px;background:var(--surface2);border-radius:6px">ยังไม่มี item</span>`
+          :pool[r].map((x,i)=>`<span class="chip ${r}">${x}<button onclick="removeItem('${r}',${i})">✕</button></span>`).join('')}
+      </div>
+    </div>`).join('');
+}
+
+// ---- ROLL LOGIC ----
+function rollOne(pc){
+  if(pityOn&&pc>=90)return{rarity:'SSR',name:pick('SSR')};
+  const rand=Math.random()*100;
+  let cum=0;
+  for(const r of RARS){cum+=rates[r];if(rand<cum)return{rarity:r,name:pick(r)};}
+  return{rarity:'N',name:pick('N')};
+}
+function pick(r){const p=pool[r];return p.length>0?p[Math.floor(Math.random()*p.length)]:r+' Item';}
+
+// ---- SIMULATION ----
+function doRoll(){
+  if(!rateOk())return showAlert('sim-alert',`Rate รวมต้องเท่ากับ 100% (ปัจจุบัน: ${RARS.reduce((a,r)=>a+rates[r],0).toFixed(1)}%)`,'err');
+  if(RARS.every(r=>pool[r].length===0))return showAlert('sim-alert','กรุณาเพิ่ม item ใน Item Pool ก่อน','err');
+  const count=Math.max(1,Math.min(10000,parseInt(document.getElementById('roll-count').value)||10));
+  const price=parseFloat(document.getElementById('roll-price').value)||0;
+  const results=[];
+  let pc=pityCount;
+  for(let i=0;i<count;i++){
+    const r=rollOne(pc);
+    if(r.rarity==='SSR')pc=0;else if(pityOn)pc++;
+    results.push(r);
+  }
+  pityCount=pc;
+  lastRolls={results,count,price,ts:new Date()};
+  history.unshift(lastRolls);
+  _anim=results;_skipped=false;
+  showAlert('sim-alert','','');
+  startAnim(results);
+}
+
+// ---- ANIMATION ----
+function startAnim(results){
+  const ov=document.getElementById('overlay');
+  document.getElementById('ph-orb').style.display='flex';
+  document.getElementById('ph-reveal').style.display='none';
+  document.getElementById('done-btn').style.display='none';
+  document.getElementById('orb-sub').textContent=`${results.length} ครั้ง`;
+  ov.classList.add('on');
+  let dots=0;
+  const ti=setInterval(()=>{
+    dots=(dots+1)%4;
+    document.getElementById('orb-title').textContent='กำลังสุ่ม'+'...'.slice(0,dots+1);
+  },200);
+  const dur=Math.min(2200,900+results.length*25);
+  setTimeout(()=>{
+    clearInterval(ti);
+    if(_skipped)return;
+    document.getElementById('ph-orb').style.display='none';
+    startReveal(results);
+  },dur);
+}
+
+function startReveal(results){
+  const ph=document.getElementById('ph-reveal');
+  const area=document.getElementById('reveal-area');
+  ph.style.display='flex';
+  _gcTotal=results.length;_gcFlipped=0;
+  const em={SSR:'✨',SR:'💜',R:'💙',N:'⚪'};
+  area.innerHTML=results.map((r,i)=>`
+    <div class="gc" id="gc${i}" onclick="flipOne(${i})">
+      <div class="gc-inner">
+        <div class="gc-f">🎴</div>
+        <div class="gc-b ${r.rarity}">
+          <div class="gc-shine"></div>
+          <span class="gc-rar">${r.rarity}</span>
+          <span style="font-size:1.4rem">${em[r.rarity]}</span>
+          <span class="gc-name">${r.name}</span>
+        </div>
+      </div>
+    </div>`).join('');
+
+  if(results.length<=30){
+    // stagger flip one by one
+    results.forEach((r,i)=>{
+      setTimeout(()=>{ if(!_skipped)flipOne(i,r.rarity); }, i*110+250);
+    });
+    setTimeout(()=>{
+      if(!_skipped)document.getElementById('done-btn').style.display='inline-block';
+    }, results.length*110+700);
+  } else {
+    // flip all at once with short stagger for large batches
+    setTimeout(()=>{
+      if(_skipped)return;
+      results.forEach((r,i)=>{
+        setTimeout(()=>flipOne(i,r.rarity), i*18);
+      });
+      setTimeout(()=>{
+        document.getElementById('done-btn').style.display='inline-block';
+        if(results.some(r=>r.rarity==='SSR'))spawnConfetti(50);
+      }, results.length*18+500);
+    }, 300);
+  }
+}
+
+function flipOne(i,rar){
+  const el=document.getElementById('gc'+i);
+  if(!el||el.classList.contains('flip'))return;
+  el.classList.add('flip');
+  _gcFlipped++;
+  const r=rar||(_anim[i]&&_anim[i].rarity);
+  if(r==='SSR'){
+    setTimeout(()=>{
+      el.classList.add('ssr-glow');
+      flashScreen('#fbbf2420');
+      spawnConfetti(18);
+    },380);
+  }
+  if(_gcFlipped>=_gcTotal)document.getElementById('done-btn').style.display='inline-block';
+}
+
+function flipAll(){
+  _anim.forEach((r,i)=>flipOne(i,r.rarity));
+  setTimeout(()=>{
+    document.getElementById('done-btn').style.display='inline-block';
+    if(_anim.some(r=>r.rarity==='SSR'))spawnConfetti(45);
+  },400);
+}
+
+function flashScreen(color){
+  const el=document.getElementById('flash');
+  el.style.background=color;el.classList.add('on');
+  setTimeout(()=>el.classList.remove('on'),150);
+}
+
+function spawnConfetti(n){
+  const wrap=document.getElementById('cfw');
+  const cols=['#fbbf24','#c084fc','#60a5fa','#4ade80','#f87171','#fb923c','#ffffff'];
+  for(let i=0;i<n;i++){
+    const el=document.createElement('div');
+    el.className='cf';
+    el.style.left=Math.random()*100+'vw';
+    const sz=5+Math.random()*9;
+    el.style.width=sz+'px';el.style.height=sz+'px';
+    el.style.background=cols[Math.floor(Math.random()*cols.length)];
+    el.style.borderRadius=Math.random()>.4?'50%':'2px';
+    el.style.animationDuration=(1.2+Math.random()*2.2)+'s';
+    el.style.animationDelay=Math.random()*.5+'s';
+    wrap.appendChild(el);
+    setTimeout(()=>el.remove(),4000);
+  }
+}
+
+function skipAnim(){
+  _skipped=true;
+  document.getElementById('ph-orb').style.display='none';
+  startReveal(_anim);
+}
+function closeOverlay(){
+  document.getElementById('overlay').classList.remove('on');
+  renderResults();
+  if(pityOn)updatePityUI();
+}
+
+// ---- RESULTS ----
+function renderResults(){
+  if(!lastRolls)return;
+  const{results,count,price}=lastRolls;
+  const stats={SSR:0,SR:0,R:0,N:0};
+  const byRarItem={SSR:{},SR:{},R:{},N:{}};
+  results.forEach(r=>{
+    stats[r.rarity]++;
+    byRarItem[r.rarity][r.name]=(byRarItem[r.rarity][r.name]||0)+1;
+  });
+  const cost=count*price;
+
+  document.getElementById('result-cards').innerHTML=`
+    <div class="stat-card"><div class="v" style="color:var(--ssr)">${stats.SSR}</div><div class="l">✨ SSR</div></div>
+    <div class="stat-card"><div class="v" style="color:var(--sr)">${stats.SR}</div><div class="l">💜 SR</div></div>
+    <div class="stat-card"><div class="v" style="color:var(--accent2)">${count}</div><div class="l">🎰 Rolls</div></div>
+    <div class="stat-card"><div class="v" style="color:#4ade80">${cost.toLocaleString()}</div><div class="l">💰 Cost</div></div>`;
+
+  document.getElementById('rt-table').innerHTML=`
+    <table class="tbl">
+      <thead><tr><th>Rarity</th><th>Rate ตั้ง</th><th>จำนวน</th><th>% จริง</th><th style="min-width:120px">กราฟ</th></tr></thead>
+      <tbody>${RARS.map(r=>{
+        const pct=count>0?(stats[r]/count*100).toFixed(1):'0.0';
+        return`<tr class="${r}"><td><b>${r}</b></td><td>${rates[r]}%</td><td>${stats[r]}</td><td>${pct}%</td>
+          <td><div class="pbar" style="width:120px"><div class="pbar-fill" style="background:${RC[r]};width:${Math.min(100,parseFloat(pct))}%"></div></div></td></tr>`;
+      }).join('')}</tbody>
+    </table>`;
+
+  document.getElementById('rt-items').innerHTML=RARS.map(r=>{
+    const items=Object.entries(byRarItem[r]).sort((a,b)=>b[1]-a[1]);
+    if(!items.length)return'';
+    return`<div style="margin-bottom:12px">
+      <div style="font-weight:600;margin-bottom:6px;color:${RC[r]}">${r}</div>
+      <div>${items.map(([n,c])=>`<span class="chip ${r}">${n} ×${c}</span>`).join('')}</div></div>`;
+  }).join('');
+
+  document.getElementById('rt-chart').innerHTML=RARS.map(r=>{
+    const pct=count>0?(stats[r]/count*100):0;
+    return`<div class="cbar-row">
+      <span class="cbar-label" style="color:${RC[r]}">${r}</span>
+      <div style="flex:1;background:var(--border);border-radius:4px;height:26px;overflow:hidden">
+        <div class="cbar-fill" style="background:${RC[r]};width:${Math.min(100,pct)}%">${pct>12?pct.toFixed(1)+'%':''}</div>
+      </div>
+      <span style="width:70px;text-align:right">${pct.toFixed(1)}% (${stats[r]})</span>
+    </div>`;
+  }).join('');
+
+  document.getElementById('sim-results').style.display='block';
+}
+
+function updatePityUI(){
+  document.getElementById('pity-ui').style.display='flex';
+  document.getElementById('pity-fill').style.width=Math.min(100,pityCount/90*100)+'%';
+  document.getElementById('pity-txt').textContent=pityCount+' / 90';
+}
+
+// ---- TOGGLES ----
+function onPityToggle(){
+  pityOn=document.getElementById('pity-tog').checked;
+  if(!pityOn){pityCount=0;document.getElementById('pity-ui').style.display='none';}
+  else updatePityUI();
+}
+function onFreeToggle(){
+  document.getElementById('free-settings').style.display=document.getElementById('free-tog').checked?'block':'none';
+}
+
+// ---- MONTE CARLO ----
+function runMC(){
+  if(!rateOk())return alert('Rate รวมต้องเท่ากับ 100%');
+  if(RARS.every(r=>pool[r].length===0))return alert('กรุณาเพิ่ม item ใน Item Pool ก่อน');
+  const budget=parseFloat(document.getElementById('pov-budget').value)||10000;
+  const price=parseFloat(document.getElementById('pov-price').value)||160;
+  const sims=Math.min(100000,parseInt(document.getElementById('pov-sims').value)||1000);
+  const target=parseInt(document.getElementById('pov-target').value)||1;
+  const freeOn=document.getElementById('free-tog').checked;
+  const freeReq=parseInt(document.getElementById('free-req').value)||10;
+  const freeGrant=parseInt(document.getElementById('free-grant').value)||1;
+  const maxPaid=Math.floor(budget/price);
+  let reach=0,zeroSSR=0;
+  const ssrArr=[],rollArr=[],freeArr=[];
+  for(let s=0;s<sims;s++){
+    let ssr=0,paid=0,free=0,pc=0;
+    while(paid<maxPaid){
+      paid++;
+      const r=rollOne(pc);
+      if(r.rarity==='SSR'){ssr++;pc=0;}else pc++;
+      if(freeOn&&paid%freeReq===0){
+        for(let f=0;f<freeGrant;f++){
+          free++;
+          const rf=rollOne(pc);
+          if(rf.rarity==='SSR'){ssr++;pc=0;}else pc++;
+        }
+      }
+    }
+    if(ssr>=target)reach++;
+    if(ssr===0)zeroSSR++;
+    ssrArr.push(ssr);rollArr.push(paid+free);freeArr.push(free);
+  }
+  const avg=a=>a.reduce((x,y)=>x+y,0)/a.length;
+  povData={sims,budget,price,maxPaid,target,
+    chanceReach:(reach/sims*100).toFixed(1),
+    chanceZero:(zeroSSR/sims*100).toFixed(1),
+    avgSSR:avg(ssrArr).toFixed(2),
+    avgRolls:avg(rollArr).toFixed(1),
+    avgFree:avg(freeArr).toFixed(1),
+    maxSSR:Math.max(...ssrArr),
+    minSSR:Math.min(...ssrArr),ssrArr};
+  renderMC(povData);
+}
+
+function renderMC(d){
+  document.getElementById('pov-cards').innerHTML=`
+    <div class="stat-card"><div class="v" style="color:#4ade80">${d.chanceReach}%</div><div class="l">โอกาสได้ SSR ≥ ${d.target}</div></div>
+    <div class="stat-card"><div class="v" style="color:#f87171">${d.chanceZero}%</div><div class="l">โอกาสไม่ได้ SSR เลย</div></div>
+    <div class="stat-card"><div class="v" style="color:var(--ssr)">${d.avgSSR}</div><div class="l">SSR เฉลี่ย/ผู้เล่น</div></div>
+    <div class="stat-card"><div class="v" style="color:var(--accent2)">${d.maxPaid}</div><div class="l">Paid Rolls (งบนี้)</div></div>
+    <div class="stat-card"><div class="v" style="color:#fb923c">${d.avgFree}</div><div class="l">Free Rolls เฉลี่ย</div></div>
+    <div class="stat-card"><div class="v">${d.avgRolls}</div><div class="l">Total Rolls เฉลี่ย</div></div>`;
+  const maxShow=Math.min(d.maxSSR,12);
+  const distMap={};
+  d.ssrArr.forEach(v=>{const k=Math.min(v,maxShow);distMap[k]=(distMap[k]||0)+1;});
+  const distHTML=Array.from({length:maxShow+1},(_,i)=>{
+    const cnt=distMap[i]||0;
+    const pct=(cnt/d.sims*100).toFixed(1);
+    const label=i===maxShow&&d.maxSSR>maxShow?maxShow+'+':i+'';
+    return`<div class="cbar-row">
+      <span class="cbar-label" style="color:var(--ssr);width:28px">${label}</span>
+      <div style="flex:1;background:var(--border);border-radius:4px;height:20px;overflow:hidden">
+        <div class="cbar-fill" style="background:var(--ssr);width:${Math.min(100,parseFloat(pct))}%">${parseFloat(pct)>10?pct+'%':''}</div>
+      </div>
+      <span style="width:76px;text-align:right;font-size:.78rem">${pct}% (${cnt})</span>
+    </div>`;
+  }).join('');
+  document.getElementById('pov-detail').innerHTML=`
+    <div style="background:var(--surface2);border-radius:8px;padding:12px;font-size:.82rem;color:var(--dim);margin-bottom:10px">
+      จำลอง <b style="color:var(--text)">${d.sims.toLocaleString()}</b> ผู้เล่น ·
+      งบ <b style="color:var(--text)">${d.budget.toLocaleString()}</b> เหรียญ ·
+      SSR สูงสุด <b style="color:var(--ssr)">${d.maxSSR}</b> · SSR ต่ำสุด <b style="color:var(--n)">${d.minSSR}</b>
+    </div>
+    <div style="font-size:.82rem;color:var(--dim);margin-bottom:6px">การกระจาย SSR ที่ได้รับ</div>${distHTML}`;
+  document.getElementById('pov-out').style.display='block';
+}
+
+// ---- CSV ----
+function exportCSV(){
+  if(!lastRolls)return;
+  const{results,count,price}=lastRolls;
+  const stats={SSR:0,SR:0,R:0,N:0};
+  results.forEach(r=>stats[r.rarity]++);
+  const rows=[['Roll #','Rarity','Item Name','Cost']];
+  results.forEach((r,i)=>rows.push([i+1,r.rarity,r.name,price]));
+  rows.push([],[`Summary — ${count} Rolls`,'','','']);
+  RARS.forEach(r=>rows.push([r,`Rate: ${rates[r]}%`,`Count: ${stats[r]}`,`Actual: ${(stats[r]/count*100).toFixed(1)}%`]));
+  rows.push(['Total Cost',count*price,'','']);
+  dlCSV(rows,'gacha-result.csv');
+}
+function exportPOV(){
+  if(!povData)return;
+  const d=povData;
+  const rows=[['Monte Carlo POV Results'],['Simulations',d.sims],['Budget',d.budget],['Price/Roll',d.price],
+    ['Max Paid Rolls',d.maxPaid],['SSR Target',d.target],['Chance >= Target',d.chanceReach+'%'],
+    ['Chance 0 SSR',d.chanceZero+'%'],['Avg SSR',d.avgSSR],['Avg Total Rolls',d.avgRolls],
+    ['Avg Free Rolls',d.avgFree],['Max SSR',d.maxSSR],['Min SSR',d.minSSR],
+    [],[`Player #`,'SSR Received'],...d.ssrArr.map((v,i)=>[i+1,v])];
+  dlCSV(rows,'gacha-pov.csv');
+}
+function dlCSV(rows,filename){
+  const csv=rows.map(r=>r.map(c=>`"${c??''}"`).join(',')).join('\n');
+  const blob=new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8;'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;a.download=filename;a.click();
+  URL.revokeObjectURL(url);
+}
+function copyResult(){
+  if(!lastRolls)return;
+  const{results,count,price}=lastRolls;
+  const stats={SSR:0,SR:0,R:0,N:0};
+  results.forEach(r=>stats[r.rarity]++);
+  const text=`🎰 Gacha Result (${count} rolls)\n`
+    +RARS.map(r=>`${r}: ${stats[r]} (${(stats[r]/count*100).toFixed(1)}%)`).join('\n')
+    +`\nTotal Cost: ${(count*price).toLocaleString()} เหรียญ`;
+  navigator.clipboard.writeText(text).then(()=>alert('คัดลอกแล้ว!'));
+}
+
+// ---- HISTORY ----
+function renderHist(){
+  document.getElementById('hist-count').textContent=`ประวัติทั้งหมด: ${history.length} session`;
+  const el=document.getElementById('hist-list');
+  if(!history.length){el.innerHTML='<div style="text-align:center;color:var(--dim);padding:40px">ยังไม่มีประวัติ</div>';return;}
+  el.innerHTML=history.map((h,i)=>{
+    const s={SSR:0,SR:0,R:0,N:0};
+    h.results.forEach(r=>s[r.rarity]++);
+    const t=h.ts;
+    const ts=`${t.getHours().toString().padStart(2,'0')}:${t.getMinutes().toString().padStart(2,'0')}:${t.getSeconds().toString().padStart(2,'0')}`;
+    return`<div class="hist-item">
+      <div><b>#${history.length-i}</b> · ${h.count} rolls · ${ts}
+        <span style="margin-left:8px;color:var(--ssr)">SSR×${s.SSR}</span>
+        <span style="margin-left:5px;color:var(--sr)">SR×${s.SR}</span>
+        <span style="margin-left:5px;color:var(--r)">R×${s.R}</span>
+        <span style="margin-left:5px;color:var(--n)">N×${s.N}</span>
+      </div>
+      <span style="color:var(--dim)">${(h.count*h.price).toLocaleString()} 💰</span>
+    </div>`;
+  }).join('');
+}
+function clearHist(){if(confirm('ล้างประวัติทั้งหมด?')){history=[];renderHist();}}
+
+// ---- UTILS ----
+function showAlert(id,msg,type){
+  const el=document.getElementById(id);
+  if(!msg){el.className='alert hide';return;}
+  el.textContent=msg;el.className='alert '+type;
+  setTimeout(()=>el.className='alert hide',3000);
+}
+
+// ---- INIT ----
+updateTotal();renderChart();loadDefaults();
+</script>
+</body>
+</html>
